@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meilisearch SGKP</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; color: #1c1e21; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 2rem auto; padding: 2rem; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
+        h1 { text-align: center; color: #0c4a6e; }
+        .search-form { display: flex; gap: 10px; margin-bottom: 2rem; }
+        #search-input { flex-grow: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+        button { padding: 12px 20px; background-color: #0ea5e9; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; }
+        button:hover { background-color: #0284c7; }
+        .slider-container { margin-bottom: 1rem; display: flex; flex-direction: column; align-items: center; gap: 5px;}
+        .slider-container label { font-weight: bold; color: #333; }
+        #semantic-slider { width: 80%; cursor: pointer; }
+        .result-item { border: 1px solid #e0e0e0; padding: 15px; margin-bottom: 10px; border-radius: 6px; background-color: #fafafa; }
+        .result-item h3 { margin: 0 0 5px 0; color: #075985; }
+        .info {
+            font-size: 0.9em;
+            font-style: italic;
+            color: #555;
+            margin-top: -5px;
+            margin-bottom: 8px;
+        }
+        .smallinfo {
+            font-size: 0.7em;
+            color: #555;
+            margin-top: -5px;
+            margin-bottom: 6px;
+        }
+        .typy-container {
+            font-size: 0.9em;
+            font-style: italic;
+            color: #555;
+            margin-top: -2px;
+            /* margin-bottom: 8px; */
+        }
+        .typy-tag {
+            display: inline-block;
+            font-size: 0.9em;
+            font-style: italic;
+            color: #555;
+            margin-right: 6px;
+            /* margin-bottom: 6px; */
+        }
+        .result-item p { margin: 0; }
+        #results-info { color: #666; font-style: italic; }
+        em {
+            color: black;
+            background-color: yellow;
+            font-style: normal;
+            padding: 2px 4px;
+            border-radius: 3px; /* zaokrąglenie rogów tła */
+        }
+        #reset-button {
+            background-color: #6c757d; /* szary kolor tła */
+        }
+        #reset-button:hover {
+            background-color: #5a6268;
+        }
+        /* style dla okna modalnego */
+        .modal {
+            display: none; /* domyślnie ukryty */
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.6);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 25px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 8px;
+            position: relative;
+        }
+        .close-button {
+            color: #aaa;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+        }
+        .modal-text-content {
+            max-height: 400px;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        /* styl dla klikalnej nazwy hasła */
+        .entry-nazwa-link {
+            cursor: pointer;
+            color: #075985;
+            text-decoration: underline;
+        }
+        .entry-nazwa-link:hover {
+            color: #0ea5e9;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>📜 Wyszukiwarka informacji w SGKP</h1>
+
+        <form id="search-form">
+            <div class="slider-container">
+                <label for="semantic-slider">Balans Słów Kluczowych i Semantyki: <span id="slider-value">0%</span></label>
+                <input type="range" id="semantic-slider" name="ratio" min="0" max="100" value="0">
+            </div>
+
+            <div class="search-form">
+                <input type="text" id="search-input" placeholder="np. 'młyn parowy'...">
+                <button type="submit">Szukaj</button>
+                <button type="button" id="reset-button">Wyczyść</button>
+            </div>
+        </form>
+
+        <div id="results-info"></div>
+        <div id="results"></div>
+    </div>
+
+    <div id="entry-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <div id="modal-body">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('search-form');
+        const input = document.getElementById('search-input');
+        const slider = document.getElementById('semantic-slider');
+        const sliderValueSpan = document.getElementById('slider-value');
+        const resultsContainer = document.getElementById('results');
+        const resultsInfo = document.getElementById('results-info');
+        const resetButton = document.getElementById('reset-button');
+
+        const modal = document.getElementById('entry-modal');
+        const modalBody = document.getElementById('modal-body');
+        const closeButton = document.querySelector('.close-button');
+
+        
+        function resetApplication() {
+            input.value = ''; // Czyści pole tekstowe
+            resultsContainer.innerHTML = ''; // Czyści kontener z wynikami
+            resultsInfo.textContent = ''; // Czyści tekst informacyjny
+            input.focus(); // Ustawia kursor z powrotem w polu wyszukiwania
+        }
+        
+        async function performSearch() {
+            const query = input.value;
+            const ratio = slider.value;
+            if (!query) { return; }
+            resultsInfo.textContent = 'Wyszukiwanie...';
+            try {
+                const params = new URLSearchParams({ q: query, ratio: ratio });
+                const response = await fetch(`/search?${params}`);
+                const data = await response.json();
+                displayResults(data);
+            } catch (error) {
+                resultsInfo.textContent = 'Błąd podczas pobierania wyników.';
+                console.error('Wyszukiwanie nie powiodło się:', error);
+            }
+        }
+
+        // aktualizacja wyświetlanej wartości procentowej przy przesuwaniu suwaka
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            performSearch();
+        });
+
+        slider.addEventListener('input', () => {
+            sliderValueSpan.textContent = `${slider.value}%`;
+        });
+
+
+        function displayResults(data) {
+            resultsContainer.innerHTML = ''; // czyszczenie poprzednich wyników
+
+            resultsInfo.textContent = `Znaleziono ${data.estimatedTotalHits} wyników w ${data.processingTimeMs}ms.`;
+
+            if (data.hits && data.hits.length > 0) {
+                data.hits.forEach(hit => {
+                    const item = document.createElement('div');
+                    item.className = 'result-item';
+
+                    let typyHtml = '';
+                    if (hit.typ_punktu_osadniczego && hit.typ_punktu_osadniczego.length > 0) {
+                        const typyTags = hit.typ_punktu_osadniczego.map(typ => `<span class="typy-tag">${typ}</span>`).join(',');
+                        typyHtml = `<div class="typy-container">typ punktu osadniczego: ${typyTags}</div>`;
+                    }
+
+                    item.innerHTML = `
+                        <h3 class="entry-nazwa-link" data-id="${hit.ID}">${hit.nazwa}</h3>
+                        ${hit.powiat_ujednolicony ? `<p class="info">powiat: ${hit.powiat_ujednolicony}</p>` : ''}
+                        ${hit.parafia_katolicka ? `<p class="info">parafia katolicka: ${hit.parafia_katolicka}</p>` : ''}
+                        ${typyHtml}
+                        <p class="smallinfo">RankingScore: ${(hit._rankingScore).toFixed(2)}</p>
+                        <p>${hit._formatted.text}</p>
+                    `;
+                    resultsContainer.appendChild(item);
+                });
+            } else {
+                resultsContainer.innerHTML = '<p>Brak wyników.</p>';
+            }
+        }
+
+         // Otwieranie okna
+        async function openModal(entryId) {
+            try {
+                const response = await fetch(`/entry/${entryId}`);
+                if (!response.ok) { throw new Error('Nie można załadować danych.'); }
+                const entry = await response.json();
+
+                // Generowanie HTML dla typów punktów osadniczych (pełna lista)
+                let typyHtml = '';
+                if (entry.typ_punktu_osadniczego && entry.typ_punktu_osadniczego.length > 0) {
+                    const typyTags = entry.typ_punktu_osadniczego.map(typ => `<span class="typy-tag">${typ}</span>`).join(', ');
+                    typyHtml = `<div class="typy-container">typ punktu osadniczego: ${typyTags}</div>`;
+                }
+
+                let obiektySakralneHTML = '';
+                if (entry.obiekty_sakralne && entry.obiekty_sakralne.length > 0) {
+                    const sakralneTags = entry.obiekty_sakralne.map(obiekt => `<span class="typy-tag">${obiekt}</span>`).join(', ');
+                    obiektySakralneHTML = `<div class="typy-container">obiekty sakralne: ${sakralneTags}</div>`;
+                }
+
+                let przemysloweHTML = '';
+                if (entry.przemyslowe && entry.przemyslowe.length > 0) {
+                    const przemysloweTags = entry.przemyslowe.map(obiekt => `<span class="typy-tag">${obiekt}</span>`).join(', ');
+                    przemysloweHTML = `<div class="typy-container">obiekty przemysłowe: ${przemysloweTags}</div>`;
+                }
+
+                // wypełnianie okna modalnego danymi
+                modalBody.innerHTML = `
+                    <h2>${entry.nazwa}</h2>
+                    ${entry.ID ? `<p class="info">ID: ${entry.ID}</p>` : ''}
+                    ${entry.powiat_ujednolicony ? `<p class="info">powiat: ${entry.powiat_ujednolicony}</p>` : ''}
+                    ${entry.parafia_katolicka ? `<p class="info">parafia katolicka: ${entry.parafia_katolicka}</p>` : ''}
+                    ${typyHtml}
+                    ${obiektySakralneHTML}
+                    ${przemysloweHTML}
+                    <p class="modal-text-content">${entry.text}</p>
+                `;
+
+                modal.style.display = 'block'; // show okno
+            } catch (error) {
+                modalBody.innerHTML = `<p style="color: red;">${error.message}</p>`;
+                modal.style.display = 'block';
+            }
+        }
+
+        // Zamykanie okna
+        function closeModal() {
+            modal.style.display = 'none';
+            modalBody.innerHTML = ''; // clear zawartość
+        }
+
+        // nasłuchiwanie na kliknięcia w kontenerze wyników (delegacja zdarzeń)
+        resultsContainer.addEventListener('click', (e) => {
+            if (e.target && e.target.classList.contains('entry-nazwa-link')) {
+                e.preventDefault();
+                const entryId = e.target.dataset.id;
+                openModal(entryId);
+            }
+        });
+        
+        // nasłuchiwanie na kliknięcie przycisku do czyszczenia wyników
+        resetButton.addEventListener('click', resetApplication);
+
+        // event listenery do zamykania
+        closeButton.addEventListener('click', closeModal);
+        window.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>
