@@ -11,7 +11,7 @@ import stopwordsiso as stopwords
 
 
 MEILI_HOST = "http://localhost:7700"
-INDEX_NAME = "sgkp"
+INDEX_NAME = "sgkp06"
 env_path = Path(".") / ".env"
 load_dotenv(dotenv_path=env_path)
 MEILI_API_KEY = os.environ.get('MEILI_API_KEY')
@@ -76,7 +76,7 @@ def setup_index_and_documents():
     client.wait_for_task(task.task_uid, timeout_in_ms=50000)
 
     print("Dodawanie dokumentów do indeksu...")
-    with open('sgkp_scalone.json', 'r', encoding='utf-8') as f:
+    with open('sgkp06.json', 'r', encoding='utf-8') as f:
         sgkp_data = json.load(f)
 
     #task = index.add_documents(sgkp_data)
