@@ -300,7 +300,7 @@
          // Otwieranie okna
         async function openModal(entryId) {
             try {
-                const response = await fetch(`/entry/${entryId}`);
+                const response = await fetch(`entry/${entryId}`);
                 if (!response.ok) { throw new Error('Nie można załadować danych.'); }
                 const entry = await response.json();
 
