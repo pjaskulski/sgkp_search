@@ -3,15 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meilisearch SGKP</title>
+    <title>Wyszukiwanie SGKP</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; color: #1c1e21; line-height: 1.6; }
-        .container { max-width: 1200px; margin: 2rem auto; padding: 2rem; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
         h1 { text-align: center; color: #0c4a6e; }
+        h5 { text-align: center; color: #0c4a6e; }
         .search-form { display: flex; gap: 10px; margin-bottom: 2rem; }
         #search-input { flex-grow: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
         button { padding: 12px 20px; background-color: #0ea5e9; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; }
         button:hover { background-color: #0284c7; }
+        .help-button {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+            padding: 8px 16px;
+            background-color: #167c2f;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .help-button:hover {
+            background-color: #5a6268;
+        }
+
+        .disclaimer-text {
+            font-size: 0.9em;
+            color: #4a5568;
+            background-color: #f0f4f8;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
         .slider-container { margin-bottom: 1rem; display: flex; flex-direction: column; align-items: center; gap: 5px;}
         .slider-container label { font-weight: bold; color: #333; }
         #semantic-slider { width: 80%; cursor: pointer; }
@@ -82,6 +118,9 @@
             border-radius: 8px;
             position: relative;
         }
+        #help-modal .modal-content {
+            max-width: 750px;
+        }
         .close-button {
             color: #aaa;
             position: absolute;
@@ -118,7 +157,9 @@
 <body>
 
     <div class="container">
+        <button id="help-button" class="help-button">Pomoc</button>
         <h1>📜 Wyszukiwarka informacji w SGKP</h1>
+        <h5>(zindeksowane tomy: 1, 2)</h5>
 
         <form id="search-form">
             <div class="slider-container">
@@ -127,11 +168,15 @@
             </div>
 
             <div class="search-form">
-                <input type="text" id="search-input" placeholder="np. 'młyn parowy'...">
+                <input type="text" id="search-input" placeholder="np. 'mielenie ziarna'...">
                 <button type="submit">Szukaj</button>
                 <button type="button" id="reset-button">Wyczyść</button>
             </div>
         </form>
+
+        <div class="disclaimer-text">
+            * Mechanizm wyszukiwania znajduje się obecnie na wczesnym etapie testów, wyniki mogą być niekompletne lub niedokładne. Zapoznaj się z instrukcjami (Pomoc).
+        </div>
 
         <div id="results-info"></div>
         <div id="results"></div>
@@ -144,6 +189,30 @@
             </div>
         </div>
     </div>
+
+    <div id="help-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="close-help-button">&times;</span>
+            <h2>Pomoc</h2>
+            <p>Witaj w wyszukiwarce wektorowej SGKP!</p>
+            <p>SGKP czyli <a href="https://pl.wikipedia.org/wiki/S%C5%82ownik_geograficzny_Kr%C3%B3lestwa_Polskiego" target="_blank">Słownik Geograficzny Królestwa Polskiego</a></p>
+            <p><strong>Jak szukać:</strong></p>
+            <ul style="margin-top: -10px;">
+                <li>Wpisz w pole wyszukiwania interesującą Cię frazę np. "mielenie ziarna", "Karaim", "browar" (bez cudzysłowów!).</li>
+                <li>Naciśnij "Szukaj" lub klawisz Enter.</li>
+                <li>Wyszukiwarka korzysta z wyszukiwania hybrydowego, łącząc słowa kluczowe z wyszukiwaniem wektorowym (semantycznym), aby dać jak najlepsze wyniki. Ustawienie suwaka "Balans Słów Kluczowych  i Semantyki" decyduje o wpływie danego typu wyszukiwania na wynik. Ustawienie na 0% oznacze wyszukiwanie tylko według słów kluczowych, ustawienie na 100% wyszukiwanie tylko wektorowe (semantyczne).</li>
+                <li>Wyszukiwanie wg słów kluczowych szuka haseł w których występują wprowadzone w polu wyszukiwania słowa, wyszukiwanie odbywa się z pewną tolerancją tzn. wprowadzając słowo "młyny" otrzymamy wyniki w których znajdowało się zarówno to słowo, jak i "młyn", "młynowi" itp.</li>
+                <li>Wyszukiwanie wektorowe (semantyczne) wyszukije hasła według znaczenia wprowadzonych wyrazów, dlatego sformułowanie "mielenie ziarna" zwróci hasła zwierające słowa młyn, młyny. To samo sformułowanie wprowadzone przy ustawieniu na wyszukiwanie tylko według słów kluczowych zwróci hasła, w których występuje słowo "mielenie".</li>
+                <li>Wyszukiwanie semantyczne nie odpowiada na pytania (jak chat z modelem językowym), zwraca jedynie wyniki o zbliżonym znaczeniu do zapytania, nie zwraca też kompletnej, precyzyjnej listy informacji.</li>
+            </ul>
+            <p><strong>Wyniki:</strong></p>
+            <ul style="margin-top: -10px;">
+                <li>Kliknij na tytuł (label) wyniku, aby zobaczyć więcej szczegółów w osobnym oknie.</li>
+                <li>Użyj przycisku "Wyczyść", aby zresetować widok.</li>
+            </ul>
+        </div>
+    </div>
+
 
     <script>
         const form = document.getElementById('search-form');
@@ -158,14 +227,18 @@
         const modalBody = document.getElementById('modal-body');
         const closeButton = document.querySelector('.close-button');
 
-        
+         // dla pomocy
+        const helpButton = document.getElementById('help-button');
+        const helpModal = document.getElementById('help-modal');
+        const closeHelpButton = document.getElementById('close-help-button');
+
         function resetApplication() {
             input.value = ''; // Czyści pole tekstowe
             resultsContainer.innerHTML = ''; // Czyści kontener z wynikami
             resultsInfo.textContent = ''; // Czyści tekst informacyjny
             input.focus(); // Ustawia kursor z powrotem w polu wyszukiwania
         }
-        
+
         async function performSearch() {
             const query = input.value;
             const ratio = slider.value;
@@ -275,6 +348,15 @@
             modalBody.innerHTML = ''; // clear zawartość
         }
 
+        // do okna POMOCY
+        helpButton.addEventListener('click', () => {
+            helpModal.style.display = 'block';
+        });
+
+        closeHelpButton.addEventListener('click', () => {
+            helpModal.style.display = 'none';
+        });
+
         // nasłuchiwanie na kliknięcia w kontenerze wyników (delegacja zdarzeń)
         resultsContainer.addEventListener('click', (e) => {
             if (e.target && e.target.classList.contains('entry-nazwa-link')) {
@@ -283,7 +365,7 @@
                 openModal(entryId);
             }
         });
-        
+
         // nasłuchiwanie na kliknięcie przycisku do czyszczenia wyników
         resetButton.addEventListener('click', resetApplication);
 
@@ -292,6 +374,9 @@
         window.addEventListener('click', (e) => {
             if (e.target === modal) {
                 closeModal();
+            }
+            if (e.target === helpModal) {
+                helpModal.style.display = 'none';
             }
         });
     </script>

@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 
 MEILI_HOST = "http://localhost:7700"
-INDEX_NAME = "sgkp06"
+INDEX_NAME = "sgkp"
 env_path = Path(".") / ".env"
 load_dotenv(dotenv_path=env_path)
 MEILI_API_KEY = os.environ.get('MEILI_API_KEY')
@@ -17,10 +17,6 @@ MEILI_API_KEY = os.environ.get('MEILI_API_KEY')
 client = meilisearch.Client(MEILI_HOST, MEILI_API_KEY)
 app = Flask(__name__, static_folder='static')
 
-# ------------------------------- FUNCTIONS ------------------------------------
-def get_detailed_instruct(task_description: str, query: str) -> str:
-    """ przygotowanie instrukcji dla modelu Qwen3 """
-    return f'Instruct: {task_description}\nQuery:{query}'
 
 # ------------------------------ API ENDPOINTS ---------------------------------
 @app.route("/")
@@ -55,7 +51,7 @@ def search():
     if semantic_ratio > 0:
         search_params['hybrid'] = {
             "semanticRatio": semantic_ratio,
-            "embedder": "qwen3"
+            "embedder": "openai"
         }
 
         print(f"⚡️ Wykonuję wyszukiwanie hybrydowe z ratio: {semantic_ratio}")
@@ -63,11 +59,10 @@ def search():
         print("🔍 Wykonuję wyszukiwanie pełnotekstowe (keyword).")
 
     index = client.index(INDEX_NAME)
-    task = "Given a search query, retrieve relevant passages that answer the query"
+
     try:
         if semantic_ratio > 0:
-            query = get_detailed_instruct(task, query)
-
+            query = f'<{query}>'
         search_results = index.search(query, search_params)
         return jsonify(search_results)
     except Exception as e:
@@ -92,4 +87,4 @@ def get_entry(entry_id):
 # -------------------------------- MAIN ----------------------------------------
 if __name__ == '__main__':
 
-    app.run(port=8080, debug=True)
+    app.run(port=8082, debug=True)

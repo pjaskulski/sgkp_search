@@ -205,5 +205,5 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
-sgkp_scalone.json
-sgkp06.json
+scalone/*.json
+doc/
