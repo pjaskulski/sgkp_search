@@ -246,7 +246,7 @@
             resultsInfo.textContent = 'Wyszukiwanie...';
             try {
                 const params = new URLSearchParams({ q: query, ratio: ratio });
-                const response = await fetch(`/search?${params}`);
+                const response = await fetch(`search?${params}`);
                 const data = await response.json();
                 displayResults(data);
             } catch (error) {
