@@ -13,8 +13,9 @@ INDEX_NAME = "sgkp"
 env_path = Path(".") / ".env"
 load_dotenv(dotenv_path=env_path)
 MEILI_API_KEY = os.environ.get('MEILI_API_KEY')
+MEILI_READ_API_KEY = os.environ.get('MEILI_READ_API_KEY')
 
-client = meilisearch.Client(MEILI_HOST, MEILI_API_KEY)
+client = meilisearch.Client(MEILI_HOST, MEILI_READ_API_KEY)
 app = Flask(__name__, static_folder='static')
 
 
@@ -24,11 +25,13 @@ def serve_index():
     """funkcja serwuje główny plik HTML"""
     return send_from_directory(app.static_folder, 'index.html')
 
+
 @app.route("/search")
 def search():
-    """obsługa zapytań wyszukiwania z frontendu"""
+    """obsługa zapytań wyszukiwania z frontendu z paginacją"""
     query = request.args.get('q')
     ratio_str = request.args.get('ratio', '0')
+    page_str = request.args.get('page', '1')  # Pobieramy numer strony, domyślnie 1
 
     if not query:
         return jsonify({"error": "Parametr 'q' jest wymagany"}), 400
@@ -39,13 +42,23 @@ def search():
     except (ValueError, TypeError):
         semantic_ratio = 0.0
 
+    try:
+        page = int(page_str)
+        if page < 1: page = 1
+    except (ValueError, TypeError):
+        page = 1
+
+    hits_per_page = 20
+    offset = (page - 1) * hits_per_page
+
     search_params = {
             "locales": ["pol"],
-            "attributesToCrop": ["text:75"],  # przycięcie pola 'text' do 75 słów
-            'attributesToHighlight': ['text'], # podświetlanie pasujących terminów zapytania w określonych atrybutach
+            "attributesToCrop": ["text:75"],
+            'attributesToHighlight': ['text'],
             'showRankingScore': True,
-            #'sort': ['nazwa:desc']
-        }
+            'limit': hits_per_page,  # Limit wyników na stronę
+            'offset': offset         # Przesunięcie
+    }
 
     # wyszukiwanie hybrydowe jeżeli parametr semantic_ratio > 0
     if semantic_ratio > 0:
@@ -53,10 +66,9 @@ def search():
             "semanticRatio": semantic_ratio,
             "embedder": "openai"
         }
-
-        print(f"⚡️ Wykonuję wyszukiwanie hybrydowe z ratio: {semantic_ratio}")
+        print(f"⚡️ Wykonuję wyszukiwanie hybrydowe z ratio: {semantic_ratio}, strona: {page}")
     else:
-        print("🔍 Wykonuję wyszukiwanie pełnotekstowe (keyword).")
+        print(f"🔍 Wykonuję wyszukiwanie pełnotekstowe (keyword), strona: {page}")
 
     index = client.index(INDEX_NAME)
 

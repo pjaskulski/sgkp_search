@@ -17,10 +17,31 @@
         }
         h1 { text-align: center; color: #0c4a6e; }
         h5 { text-align: center; color: #0c4a6e; }
-        .search-form { display: flex; gap: 10px; margin-bottom: 2rem; }
-        #search-input { flex-grow: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
-        button { padding: 12px 20px; background-color: #0ea5e9; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; }
+        .search-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 2rem;
+        }
+        #search-input {
+            flex-grow: 1;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        button {
+            padding: 12px 20px;
+            background-color: #0ea5e9;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
         button:hover { background-color: #0284c7; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+
         .help-button {
             position: absolute;
             top: 2rem;
@@ -34,9 +55,7 @@
             font-size: 14px;
             font-weight: bold;
         }
-        .help-button:hover {
-            background-color: #5a6268;
-        }
+        .help-button:hover { background-color: #5a6268; }
 
         .disclaimer-text {
             font-size: 0.9em;
@@ -48,57 +67,92 @@
             margin-bottom: 2rem;
         }
 
-        .slider-container { margin-bottom: 1rem; display: flex; flex-direction: column; align-items: center; gap: 5px;}
+        .slider-container {
+            margin-bottom: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
         .slider-container label { font-weight: bold; color: #333; }
         #semantic-slider { width: 80%; cursor: pointer; }
-        .result-item { border: 1px solid #e0e0e0; padding: 15px; margin-bottom: 10px; border-radius: 6px; background-color: #fafafa; }
-        .result-item h3 { margin: 0 0 5px 0; color: #075985; }
+
+        /* Wyniki */
+        .result-item {
+            border: 1px solid #e0e0e0;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            background-color: #fafafa;
+        }
+        .result-item h3 {
+            margin: 0 0 5px 0;
+            color: #075985;
+        }
         .info {
             font-size: 0.9em;
-            font-style: italic;
+            font-style: normal;
             color: #555;
             margin-top: -5px;
             margin-bottom: 8px;
         }
+        .info-tom {
+            font-size: 0.9em;
+            color: #000000;
+            margin-top: -5px;
+            margin-bottom: 8px;
+        }
         .smallinfo {
-            font-size: 0.7em;
-            color: #555;
+            font-size: 0.8em;
+            color: #095d03;
             margin-top: -5px;
             margin-bottom: 6px;
         }
         .typy-container {
             font-size: 0.9em;
-            font-style: italic;
+            font-style: normal;
             color: #555;
             margin-top: -2px;
-            /* margin-bottom: 8px; */
         }
         .typy-tag {
             display: inline-block;
             font-size: 0.9em;
-            font-style: italic;
+            font-style: normal;
             color: #555;
             margin-right: 6px;
-            /* margin-bottom: 6px; */
         }
         .result-item p { margin: 0; }
-        #results-info { color: #666; font-style: italic; }
+        #results-info {
+            color: #666;
+            font-style: normal;
+            margin-bottom: 10px;
+        }
+
         em {
             color: black;
             background-color: yellow;
             font-style: normal;
             padding: 2px 4px;
-            border-radius: 3px; /* zaokrąglenie rogów tła */
+            border-radius: 3px;
         }
-        #reset-button {
-            background-color: #6c757d; /* szary kolor tła */
+
+        #reset-button { background-color: #6c757d; }
+        #reset-button:hover { background-color: #5a6268; }
+
+        /* Paginacja */
+        .pagination-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-top: 20px;
+            display: none; /* Domyślnie ukryte */
         }
-        #reset-button:hover {
-            background-color: #5a6268;
-        }
-        /* style dla okna modalnego */
+        .pagination-info { font-size: 0.9em; color: #555; }
+
+        /* Modal */
         .modal {
-            display: none; /* domyślnie ukryty */
+            display: none;
             position: fixed;
             z-index: 1000;
             left: 0;
@@ -110,7 +164,7 @@
         }
         .modal-content {
             background-color: #fefefe;
-            margin: 10% auto;
+            margin: 5% auto;
             padding: 25px;
             border: 1px solid #888;
             width: 80%;
@@ -118,9 +172,7 @@
             border-radius: 8px;
             position: relative;
         }
-        #help-modal .modal-content {
-            max-width: 750px;
-        }
+        #help-modal .modal-content { max-width: 750px; }
         .close-button {
             color: #aaa;
             position: absolute;
@@ -130,12 +182,9 @@
             font-weight: bold;
             cursor: pointer;
         }
-        .close-button:hover,
-        .close-button:focus {
-            color: black;
-        }
+        .close-button:hover, .close-button:focus { color: black; }
         .modal-text-content {
-            max-height: 400px;
+            max-height: 60vh;
             overflow-y: auto;
             background-color: #f9f9f9;
             border: 1px solid #ddd;
@@ -143,21 +192,18 @@
             border-radius: 4px;
             white-space: pre-wrap;
         }
-        /* styl dla klikalnej nazwy hasła */
         .entry-nazwa-link {
             cursor: pointer;
             color: #075985;
             text-decoration: underline;
         }
-        .entry-nazwa-link:hover {
-            color: #0ea5e9;
-        }
+        .entry-nazwa-link:hover { color: #0ea5e9; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <button id="help-button" class="help-button">Pomoc</button>
+        <button id="help-button" class="help-button" title="Informacje na temat aplikacji">Pomoc</button>
         <h1>📜 Wyszukiwarka informacji w SGKP</h1>
 
         <form id="search-form">
@@ -168,8 +214,8 @@
 
             <div class="search-form">
                 <input type="text" id="search-input" placeholder="np. 'mielenie ziarna'...">
-                <button type="submit">Szukaj</button>
-                <button type="button" id="reset-button">Wyczyść</button>
+                <button type="submit" title="Wyszukiwanie według podanych parametrów">Szukaj</button>
+                <button type="button" id="reset-button" title="Wyczyść wyniki">Wyczyść</button>
             </div>
         </form>
 
@@ -179,13 +225,22 @@
 
         <div id="results-info"></div>
         <div id="results"></div>
+
+        <div id="pagination" class="pagination-container">
+            <button id="first-page" type="button" title="Idź do pierwszej strony wyników">&laquo; Pierwsza</button>
+            <button id="prev-page" type="button" title="Idź do poprzedniej strony wyników">Poprzednia</button>
+
+            <span id="pagination-info" class="pagination-info">Strona 1</span>
+
+            <button id="next-page" type="button" title="Idź do następnej strony wyników">Następna</button>
+            <button id="last-page" type="button" title="Idź do ostatniej strony wyników">Ostatnia &raquo;</button>
+        </div>
     </div>
 
     <div id="entry-modal" class="modal">
         <div class="modal-content">
             <span class="close-button">&times;</span>
-            <div id="modal-body">
-            </div>
+            <div id="modal-body"></div>
         </div>
     </div>
 
@@ -212,7 +267,6 @@
         </div>
     </div>
 
-
     <script>
         const form = document.getElementById('search-form');
         const input = document.getElementById('search-input');
@@ -222,55 +276,142 @@
         const resultsInfo = document.getElementById('results-info');
         const resetButton = document.getElementById('reset-button');
 
+        // Paginacja
+        const paginationContainer = document.getElementById('pagination');
+        const firstPageBtn = document.getElementById('first-page');
+        const prevPageBtn = document.getElementById('prev-page');
+        const nextPageBtn = document.getElementById('next-page');
+        const lastPageBtn = document.getElementById('last-page');
+        const paginationInfo = document.getElementById('pagination-info');
+
         const modal = document.getElementById('entry-modal');
         const modalBody = document.getElementById('modal-body');
         const closeButton = document.querySelector('.close-button');
-
-         // dla pomocy
         const helpButton = document.getElementById('help-button');
         const helpModal = document.getElementById('help-modal');
         const closeHelpButton = document.getElementById('close-help-button');
 
+        // Zmienne stanu
+        let currentPage = 1;
+        let totalPages = 0;
+        const resultsPerPage = 20;
+        let currentQuery = '';
+
         function resetApplication() {
-            input.value = ''; // Czyści pole tekstowe
-            resultsContainer.innerHTML = ''; // Czyści kontener z wynikami
-            resultsInfo.textContent = ''; // Czyści tekst informacyjny
-            input.focus(); // Ustawia kursor z powrotem w polu wyszukiwania
+            input.value = '';
+            resultsContainer.innerHTML = '';
+            resultsInfo.textContent = '';
+            paginationContainer.style.display = 'none';
+            currentPage = 1;
+            input.focus();
         }
 
-        async function performSearch() {
+        async function performSearch(page = 1) {
             const query = input.value;
             const ratio = slider.value;
             if (!query) { return; }
+
+            // Jeśli zapytanie się zmieniło, resetujemy na 1 stronę (chyba że to wywołanie z paginacji)
+            if (query !== currentQuery) {
+               // currentPage = 1; // Ta logika jest już obsłużona w submit form
+               currentQuery = query;
+            }
+
             resultsInfo.textContent = 'Wyszukiwanie...';
+
             try {
-                const params = new URLSearchParams({ q: query, ratio: ratio });
+                // Dodajemy parametr page
+                const params = new URLSearchParams({ q: query, ratio: ratio, page: page });
                 const response = await fetch(`search?${params}`);
                 const data = await response.json();
+
+                currentPage = page; // Aktualizuj aktualną stronę po udanym pobraniu
                 displayResults(data);
+                updatePagination(data); // Aktualizuj przyciski
+
             } catch (error) {
                 resultsInfo.textContent = 'Błąd podczas pobierania wyników.';
                 console.error('Wyszukiwanie nie powiodło się:', error);
             }
         }
 
-        // aktualizacja wyświetlanej wartości procentowej przy przesuwaniu suwaka
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            performSearch();
+            currentPage = 1; // Nowe wyszukiwanie zawsze od strony 1
+            performSearch(currentPage);
         });
 
         slider.addEventListener('input', () => {
             sliderValueSpan.textContent = `${slider.value}%`;
         });
 
+        // Obsługa przycisków paginacji
+        // Pierwsza strona
+        firstPageBtn.addEventListener('click', () => {
+            if (currentPage > 1) {
+                performSearch(1);
+            }
+        });
+
+        // Poprzednia strona
+        prevPageBtn.addEventListener('click', () => {
+            if (currentPage > 1) {
+                performSearch(currentPage - 1);
+            }
+        });
+
+        // Następna strona
+        nextPageBtn.addEventListener('click', () => {
+            if (currentPage < totalPages) {
+                performSearch(currentPage + 1);
+            }
+        });
+
+        // Ostatnia strona
+        lastPageBtn.addEventListener('click', () => {
+            if (currentPage < totalPages) {
+                performSearch(totalPages);
+            }
+        });
+
+        // Funkcja aktualizująca stan przycisków
+        function updatePagination(data) {
+            const totalHits = data.estimatedTotalHits;
+            totalPages = Math.ceil(totalHits / resultsPerPage);
+
+            if (totalHits > 0) {
+                paginationContainer.style.display = 'flex';
+                paginationInfo.textContent = `Strona ${currentPage} z ${totalPages}`;
+
+                // Jeśli jesteśmy na pierwszej stronie, blokujemy "Pierwsza" i "Poprzednia"
+                const isFirst = currentPage === 1;
+                firstPageBtn.disabled = isFirst;
+                prevPageBtn.disabled = isFirst;
+
+                // Jeśli jesteśmy na ostatniej stronie, blokujemy "Następna" i "Ostatnia"
+                const isLast = currentPage === totalPages || totalPages === 0;
+                nextPageBtn.disabled = isLast;
+                lastPageBtn.disabled = isLast;
+
+            } else {
+                paginationContainer.style.display = 'none';
+            }
+        }
 
         function displayResults(data) {
-            resultsContainer.innerHTML = ''; // czyszczenie poprzednich wyników
+            resultsContainer.innerHTML = '';
 
-            resultsInfo.textContent = `Znaleziono ${data.estimatedTotalHits} wyników w ${data.processingTimeMs}ms.`;
+            const total = data.estimatedTotalHits;
+            const time = data.processingTimeMs;
+
+            // Obliczanie zakresu wyświetlania (np. 1-20)
+            const start = (currentPage - 1) * resultsPerPage + 1;
+            let end = currentPage * resultsPerPage;
+            if (end > total) end = total;
 
             if (data.hits && data.hits.length > 0) {
+                 resultsInfo.textContent = `Pokazuję wyniki ${start}-${end} z ok. ${total} (${time}ms).`;
+
                 data.hits.forEach(hit => {
                     const item = document.createElement('div');
                     item.className = 'result-item';
@@ -283,27 +424,29 @@
 
                     item.innerHTML = `
                         <h3 class="entry-nazwa-link" data-id="${hit.ID}">${hit.nazwa}</h3>
+                        <p class="info-tom">Tom: ${hit.tom}, strona: ${hit.strona}</p>
                         ${hit.powiat_ujednolicony ? `<p class="info">powiat: ${hit.powiat_ujednolicony}</p>` : ''}
                         ${hit.parafia_katolicka ? `<p class="info">parafia katolicka: ${hit.parafia_katolicka}</p>` : ''}
                         ${typyHtml}
-                        <p class="smallinfo">RankingScore: ${(hit._rankingScore).toFixed(2)}</p>
-                        <p>${hit._formatted.text}</p>
+                        <p class="smallinfo">RankingScore: ${(hit._rankingScore ? hit._rankingScore.toFixed(2) : 'N/A')}</p>
+                        <p>${hit._formatted ? hit._formatted.text : hit.text}</p>
                     `;
                     resultsContainer.appendChild(item);
                 });
             } else {
                 resultsContainer.innerHTML = '<p>Brak wyników.</p>';
+                resultsInfo.textContent = '';
+                paginationContainer.style.display = 'none';
             }
         }
 
-         // Otwieranie okna
+        // Reszta funkcji (openModal, closeModal, etc.) pozostaje bez zmian jak w oryginale
         async function openModal(entryId) {
             try {
                 const response = await fetch(`entry/${entryId}`);
                 if (!response.ok) { throw new Error('Nie można załadować danych.'); }
                 const entry = await response.json();
 
-                // Generowanie HTML dla typów punktów osadniczych (pełna lista)
                 let typyHtml = '';
                 if (entry.typ_punktu_osadniczego && entry.typ_punktu_osadniczego.length > 0) {
                     const typyTags = entry.typ_punktu_osadniczego.map(typ => `<span class="typy-tag">${typ}</span>`).join(', ');
@@ -322,10 +465,10 @@
                     przemysloweHTML = `<div class="typy-container">obiekty przemysłowe: ${przemysloweTags}</div>`;
                 }
 
-                // wypełnianie okna modalnego danymi
                 modalBody.innerHTML = `
                     <h2>${entry.nazwa}</h2>
                     ${entry.ID ? `<p class="info">ID: ${entry.ID}</p>` : ''}
+                    <p class="info-tom">Tom: ${entry.tom}, strona: ${entry.strona}</p>
                     ${entry.powiat_ujednolicony ? `<p class="info">powiat: ${entry.powiat_ujednolicony}</p>` : ''}
                     ${entry.parafia_katolicka ? `<p class="info">parafia katolicka: ${entry.parafia_katolicka}</p>` : ''}
                     ${typyHtml}
@@ -333,30 +476,21 @@
                     ${przemysloweHTML}
                     <p class="modal-text-content">${entry.text}</p>
                 `;
-
-                modal.style.display = 'block'; // show okno
+                modal.style.display = 'block';
             } catch (error) {
                 modalBody.innerHTML = `<p style="color: red;">${error.message}</p>`;
                 modal.style.display = 'block';
             }
         }
 
-        // Zamykanie okna
         function closeModal() {
             modal.style.display = 'none';
-            modalBody.innerHTML = ''; // clear zawartość
+            modalBody.innerHTML = '';
         }
 
-        // do okna POMOCY
-        helpButton.addEventListener('click', () => {
-            helpModal.style.display = 'block';
-        });
+        helpButton.addEventListener('click', () => { helpModal.style.display = 'block'; });
+        closeHelpButton.addEventListener('click', () => { helpModal.style.display = 'none'; });
 
-        closeHelpButton.addEventListener('click', () => {
-            helpModal.style.display = 'none';
-        });
-
-        // nasłuchiwanie na kliknięcia w kontenerze wyników (delegacja zdarzeń)
         resultsContainer.addEventListener('click', (e) => {
             if (e.target && e.target.classList.contains('entry-nazwa-link')) {
                 e.preventDefault();
@@ -365,18 +499,11 @@
             }
         });
 
-        // nasłuchiwanie na kliknięcie przycisku do czyszczenia wyników
         resetButton.addEventListener('click', resetApplication);
-
-        // event listenery do zamykania
         closeButton.addEventListener('click', closeModal);
         window.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                closeModal();
-            }
-            if (e.target === helpModal) {
-                helpModal.style.display = 'none';
-            }
+            if (e.target === modal) closeModal();
+            if (e.target === helpModal) helpModal.style.display = 'none';
         });
     </script>
 </body>
