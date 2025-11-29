@@ -14,8 +14,9 @@ env_path = Path(".") / ".env"
 load_dotenv(dotenv_path=env_path)
 MEILI_API_KEY = os.environ.get('MEILI_API_KEY')
 MEILI_READ_API_KEY = os.environ.get('MEILI_READ_API_KEY')
+MEILI_SEARCH_API_KEY = os.environ.get('MEILI_SEARCH_API_KEY')
 
-client = meilisearch.Client(MEILI_HOST, MEILI_READ_API_KEY)
+client = meilisearch.Client(MEILI_HOST, MEILI_SEARCH_API_KEY)
 app = Flask(__name__, static_folder='static')
 
 
