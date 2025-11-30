@@ -19,7 +19,7 @@ current_settings = index.get_settings()
 # Aktualizacja limitu wyników
 pagination_settings = {
     'pagination': {
-        'maxTotalHits': 100000 # Ustawienie np. na 100 tysięcy
+        'maxTotalHits': 10000 # Ustawienie np. na 10 tysięcy
     }
 }
 
