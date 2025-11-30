@@ -56,6 +56,9 @@ def setup_index_and_documents():
         'searchableAttributes': ['nazwa', 'typ_punktu_osadniczego', 'typ', 'text', 'mlyny', 'przemyslowe', 'obiekty_sakralne', 'archeo'],
         'filterableAttributes': ['powiat', 'tom'],
         'stopWords': list(stop_words_pl),
+        'pagination': {
+            'maxTotalHits': 10000
+        },
         'localizedAttributes': [
             {'attributePatterns': ['*'], 'locales': ['pol']}
         ],

@@ -168,11 +168,13 @@
             padding: 25px;
             border: 1px solid #888;
             width: 80%;
-            max-width: 600px;
+            max-width: 750px;
             border-radius: 8px;
             position: relative;
+            max-height: 90vh; /* maksymalna wysokość to 90% widoku ekranu */
+            overflow-y: auto; /* przewijanie wewnątrz okna */
         }
-        #help-modal .modal-content { max-width: 750px; }
+        #help-modal .modal-content { max-width: 850px; }
         .close-button {
             color: #aaa;
             position: absolute;
@@ -184,8 +186,8 @@
         }
         .close-button:hover, .close-button:focus { color: black; }
         .modal-text-content {
-            max-height: 60vh;
-            overflow-y: auto;
+            /*max-height: 60vh;
+            overflow-y: auto;*/
             background-color: #f9f9f9;
             border: 1px solid #ddd;
             padding: 10px;
@@ -249,19 +251,23 @@
             <span class="close-button" id="close-help-button">&times;</span>
             <h2>Pomoc</h2>
             <p>Witaj w wyszukiwarce wektorowej SGKP!</p>
-            <p>SGKP czyli <a href="https://pl.wikipedia.org/wiki/S%C5%82ownik_geograficzny_Kr%C3%B3lestwa_Polskiego" target="_blank">Słownik Geograficzny Królestwa Polskiego</a></p>
+            <p>SGKP czyli <a href="https://pl.wikipedia.org/wiki/S%C5%82ownik_geograficzny_Kr%C3%B3lestwa_Polskiego" target="_blank">Słownik Geograficzny Królestwa Polskiego</a><br>
+            Uwaga: aplikacja zawiera obecnie wstępnie przetworzoną treść Słownika, mogą występować literówki, błędy w podziale treści haseł itp.
+            </p>
             <p><strong>Jak szukać:</strong></p>
             <ul style="margin-top: -10px;">
-                <li>Wpisz w pole wyszukiwania interesującą Cię frazę np. "mielenie ziarna", "Karaim", "browar" (bez cudzysłowów!).</li>
+                <li>Wpisz w pole wyszukiwania interesującą Cię frazę np. "mielenie ziarna", "Karaim", "piwo browar", "młyn parowy", "Poniatowski", "Namysłów" - bez cudzysłowów, wersja z cudzysłówami dla wielu słów oznaczałaby wyszukiwanie dokładnej frazy. Można na przykład porównać wyniki wyszukiwania dla: Stanisław August Poniatowski (3 tys. wyników) i "Stanisław August Poniatowski" (6 wyników).</li>
                 <li>Naciśnij "Szukaj" lub klawisz Enter.</li>
-                <li>Wyszukiwarka korzysta z wyszukiwania hybrydowego, łącząc słowa kluczowe z wyszukiwaniem wektorowym (semantycznym), aby dać jak najlepsze wyniki. Ustawienie suwaka "Balans Słów Kluczowych  i Semantyki" decyduje o wpływie danego typu wyszukiwania na wynik. Ustawienie na 0% oznacze wyszukiwanie tylko według słów kluczowych, ustawienie na 100% wyszukiwanie tylko wektorowe (semantyczne).</li>
-                <li>Wyszukiwanie wg słów kluczowych szuka haseł w których występują wprowadzone w polu wyszukiwania słowa, wyszukiwanie odbywa się z pewną tolerancją tzn. wprowadzając słowo "młyny" otrzymamy wyniki w których znajdowało się zarówno to słowo, jak i "młyn", "młynowi" itp.</li>
-                <li>Wyszukiwanie wektorowe (semantyczne) wyszukije hasła według znaczenia wprowadzonych wyrazów, dlatego sformułowanie "mielenie ziarna" zwróci hasła zwierające słowa młyn, młyny. To samo sformułowanie wprowadzone przy ustawieniu na wyszukiwanie tylko według słów kluczowych zwróci hasła, w których występuje słowo "mielenie".</li>
+                <li>Wyszukiwarka korzysta z wyszukiwania hybrydowego, łącząc słowa kluczowe z wyszukiwaniem wektorowym (semantycznym), aby dać jak najlepsze wyniki. Ustawienie suwaka "Balans Słów Kluczowych  i Semantyki" decyduje o wpływie danego typu wyszukiwania na wynik. Domyślne ustawienie na 0% oznacze wyszukiwanie tylko według słów kluczowych, ustawienie na 100% to eksperymentalne wyszukiwanie tylko wektorowe (semantyczne).</li>
+                <li>Wyszukiwanie wg słów kluczowych szuka haseł, w których występują wprowadzone w polu wyszukiwania słowa, wyszukiwanie odbywa się z pewną tolerancją tzn. wprowadzając słowo "młyny" otrzymamy wyniki w których znajdowało się zarówno to słowo, jak i "młyn", "młynowi" itp.</li>
+                <li>Wyszukiwanie wektorowe (semantyczne) wyszukuje hasła według znaczenia wprowadzonych wyrazów, dlatego sformułowanie "mielenie ziarna" zwróci hasła zwierające słowa młyn, młyny. To samo sformułowanie wprowadzone przy ustawieniu na wyszukiwanie tylko według słów kluczowych zwróci hasła, w których występuje słowo "mielenie".</li>
                 <li>Wyszukiwanie semantyczne nie odpowiada na pytania (jak chat z modelem językowym), zwraca jedynie wyniki o zbliżonym znaczeniu do zapytania, nie zwraca też kompletnej, precyzyjnej listy informacji.</li>
             </ul>
             <p><strong>Wyniki:</strong></p>
             <ul style="margin-top: -10px;">
+                <li>Jeżeli wyników jest więcej niż 20, aplikacja wyświetla wyniki z podziałem na strony, u dołu listy wyników znajdują się przyciski do nawigacji między stronami.</li>
                 <li>Kliknij na tytuł (label) wyniku, aby zobaczyć więcej szczegółów w osobnym oknie.</li>
+                <li>Dla każdego hasła na liście wyników wyświetlany jest numer tomu i numer strony na której zaczyna się dane hasło w wersji drukowanej, numer strony jest linkiem, który prowadzi do skanu strony na serwerach ICM (Interdyscyplinarnego Centrum Modelowania Matematycznego i Komputerowego UW).</li>
                 <li>Użyj przycisku "Wyczyść", aby zresetować widok.</li>
             </ul>
         </div>
@@ -304,6 +310,24 @@
             paginationContainer.style.display = 'none';
             currentPage = 1;
             input.focus();
+        }
+
+        // Mapa konwersji numerów tomów z formatu "01" na rzymskie "I"
+        const volumeToRoman = {
+            '01': 'I', '02': 'II', '03': 'III', '04': 'IV', '05': 'V',
+            '1': 'I', '2': 'II', '3': 'III', '4': 'IV', '5': 'V',
+            '06': 'VI', '07': 'VII', '08': 'VIII', '09': 'IX', '10': 'X',
+            '6': 'VI', '7': 'VII', '8': 'VIII', '9': 'IX',
+            '11': 'XI', '12': 'XII', '13': 'XIII', '14': 'XIV', '15': 'XV_cz.1',
+            '16': 'XV_cz.2'
+        };
+
+        function generateScanLink(tom, strona) {
+            // Sprawdzamy czy mamy odpowiednik rzymski, jeśli nie (błąd danych), zwracamy null
+            const romanVolume = volumeToRoman[tom];
+            if (!romanVolume || !strona) return null;
+
+            return `http://dir.icm.edu.pl/Slownik_geograficzny/Tom_${romanVolume}/${strona}`;
         }
 
         async function performSearch(page = 1) {
@@ -422,9 +446,15 @@
                         typyHtml = `<div class="typy-container">typ punktu osadniczego: ${typyTags}</div>`;
                     }
 
+                    // Generowanie linku do skanu
+                    const scanLink = generateScanLink(hit.tom, hit.strona);
+                    const stronaHtml = scanLink
+                        ? `<a href="${scanLink}" target="_blank" title="Zobacz skan strony" style="color:#0ea5e9;">${hit.strona}</a>`
+                        : hit.strona;
+
                     item.innerHTML = `
                         <h3 class="entry-nazwa-link" data-id="${hit.ID}">${hit.nazwa}</h3>
-                        <p class="info-tom">Tom: ${hit.tom}, strona: ${hit.strona}</p>
+                        <p class="info-tom">Tom: ${hit.tom}, strona: ${stronaHtml}</p>
                         ${hit.powiat_ujednolicony ? `<p class="info">powiat: ${hit.powiat_ujednolicony}</p>` : ''}
                         ${hit.parafia_katolicka ? `<p class="info">parafia katolicka: ${hit.parafia_katolicka}</p>` : ''}
                         ${typyHtml}
@@ -465,10 +495,16 @@
                     przemysloweHTML = `<div class="typy-container">obiekty przemysłowe: ${przemysloweTags}</div>`;
                 }
 
+                // Generowanie linku do skanu - dla okienka modalnego
+                const scanLink = generateScanLink(entry.tom, entry.strona);
+                const stronaHtml = scanLink
+                    ? `<a href="${scanLink}" target="_blank" title="Zobacz skan strony" style="color:#0ea5e9;">${entry.strona}</a>`
+                    : entry.strona;
+
                 modalBody.innerHTML = `
                     <h2>${entry.nazwa}</h2>
                     ${entry.ID ? `<p class="info">ID: ${entry.ID}</p>` : ''}
-                    <p class="info-tom">Tom: ${entry.tom}, strona: ${entry.strona}</p>
+                    <p class="info-tom">Tom: ${entry.tom}, strona: ${stronaHtml}</p>
                     ${entry.powiat_ujednolicony ? `<p class="info">powiat: ${entry.powiat_ujednolicony}</p>` : ''}
                     ${entry.parafia_katolicka ? `<p class="info">parafia katolicka: ${entry.parafia_katolicka}</p>` : ''}
                     ${typyHtml}
@@ -504,6 +540,20 @@
         window.addEventListener('click', (e) => {
             if (e.target === modal) closeModal();
             if (e.target === helpModal) helpModal.style.display = 'none';
+        });
+
+        // Obsługa klawisza ESC do zamykania okienek modalnych
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                // Jeśli otwarte jest okienko ze szczegółami hasła
+                if (modal.style.display === 'block') {
+                    closeModal();
+                }
+                // Jeśli otwarte jest okienko pomocy
+                if (helpModal.style.display === 'block') {
+                    helpModal.style.display = 'none';
+                }
+            }
         });
     </script>
 </body>
