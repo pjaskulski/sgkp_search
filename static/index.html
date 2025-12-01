@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wyszukiwanie SGKP</title>
+    <title>Wyszukiwanie SGKP / SGKP Search</title>
     <style>
+        /* ... Twoje istniejące style ... */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; color: #1c1e21; line-height: 1.6; }
         .container {
             max-width: 1200px;
@@ -16,212 +17,88 @@
             position: relative;
         }
         h1 { text-align: center; color: #0c4a6e; }
-        h5 { text-align: center; color: #0c4a6e; }
-        .search-form {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 2rem;
-        }
-        #search-input {
-            flex-grow: 1;
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 16px;
-        }
-        button {
-            padding: 12px 20px;
-            background-color: #0ea5e9;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-        }
-        button:hover { background-color: #0284c7; }
-        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        /* ... reszta stylów bez zmian ... */
 
-        .help-button {
+        /* NOWE STYLE DLA PRZEŁĄCZNIKA JĘZYKA */
+        .lang-switch {
             position: absolute;
             top: 2rem;
-            right: 2rem;
-            padding: 8px 16px;
-            background-color: #167c2f;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-        }
-        .help-button:hover { background-color: #5a6268; }
-
-        .disclaimer-text {
-            font-size: 0.9em;
-            color: #4a5568;
-            background-color: #f0f4f8;
-            padding: 10px;
-            border-radius: 6px;
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        .slider-container {
-            margin-bottom: 1rem;
+            left: 2rem;
             display: flex;
-            flex-direction: column;
-            align-items: center;
             gap: 5px;
         }
+        .lang-btn {
+            padding: 5px 10px;
+            border: 1px solid #ccc;
+            background: #9c9b9b;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .lang-btn.active {
+            background-color: #0c4a6e;
+            color: white;
+            border-color: #0c4a6e;
+        }
+
+        /* Zachowujemy style reszty elementów */
+        .search-form { display: flex; gap: 10px; margin-bottom: 2rem; }
+        #search-input { flex-grow: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+        button { padding: 12px 20px; background-color: #0ea5e9; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; }
+        button:hover { background-color: #0284c7; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        .help-button { position: absolute; top: 2rem; right: 2rem; padding: 8px 16px; background-color: #167c2f; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold; }
+        .help-button:hover { background-color: #5a6268; }
+        .disclaimer-text { font-size: 0.9em; color: #4a5568; background-color: #f0f4f8; padding: 10px; border-radius: 6px; text-align: center; margin-bottom: 2rem; }
+        .slider-container { margin-bottom: 1rem; display: flex; flex-direction: column; align-items: center; gap: 5px; }
         .slider-container label { font-weight: bold; color: #333; }
         #semantic-slider { width: 80%; cursor: pointer; }
-
-        /* Wyniki */
-        .result-item {
-            border: 1px solid #e0e0e0;
-            padding: 15px;
-            margin-bottom: 10px;
-            border-radius: 6px;
-            background-color: #fafafa;
-        }
-        .result-item h3 {
-            margin: 0 0 5px 0;
-            color: #075985;
-        }
-        .info {
-            font-size: 0.9em;
-            font-style: normal;
-            color: #555;
-            margin-top: -5px;
-            margin-bottom: 8px;
-        }
-        .info-tom {
-            font-size: 0.9em;
-            color: #000000;
-            margin-top: -5px;
-            margin-bottom: 8px;
-        }
-        .smallinfo {
-            font-size: 0.8em;
-            color: #095d03;
-            margin-top: -5px;
-            margin-bottom: 6px;
-        }
-        .typy-container {
-            font-size: 0.9em;
-            font-style: normal;
-            color: #555;
-            margin-top: -2px;
-        }
-        .typy-tag {
-            display: inline-block;
-            font-size: 0.9em;
-            font-style: normal;
-            color: #555;
-            margin-right: 6px;
-        }
+        .result-item { border: 1px solid #e0e0e0; padding: 15px; margin-bottom: 10px; border-radius: 6px; background-color: #fafafa; }
+        .result-item h3 { margin: 0 0 5px 0; color: #075985; }
+        .info, .info-tom, .typy-container { font-size: 0.9em; margin-bottom: 8px; color: #555; }
+        .info-tom { color: #000; }
+        .smallinfo { font-size: 0.8em; color: #095d03; margin-bottom: 6px; }
+        .typy-tag { display: inline-block; margin-right: 6px; color: #555; }
         .result-item p { margin: 0; }
-        #results-info {
-            color: #666;
-            font-style: normal;
-            margin-bottom: 10px;
-        }
-
-        em {
-            color: black;
-            background-color: yellow;
-            font-style: normal;
-            padding: 2px 4px;
-            border-radius: 3px;
-        }
-
+        #results-info { color: #666; margin-bottom: 10px; }
+        em { color: black; background-color: yellow; font-style: normal; padding: 2px 4px; border-radius: 3px; }
         #reset-button { background-color: #6c757d; }
-        #reset-button:hover { background-color: #5a6268; }
-
-        /* Paginacja */
-        .pagination-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            margin-top: 20px;
-            display: none; /* Domyślnie ukryte */
-        }
+        .pagination-container { display: none; justify-content: center; align-items: center; gap: 15px; margin-top: 20px; }
         .pagination-info { font-size: 0.9em; color: #555; }
-
-        /* Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0, 0, 0, 0.6);
-        }
-        .modal-content {
-            background-color: #fefefe;
-            margin: 5% auto;
-            padding: 25px;
-            border: 1px solid #888;
-            width: 80%;
-            max-width: 750px;
-            border-radius: 8px;
-            position: relative;
-            max-height: 90vh; /* maksymalna wysokość to 90% widoku ekranu */
-            overflow-y: auto; /* przewijanie wewnątrz okna */
-        }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.6); }
+        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 25px; border: 1px solid #888; width: 80%; max-width: 750px; border-radius: 8px; position: relative; max-height: 90vh; overflow-y: auto; }
         #help-modal .modal-content { max-width: 850px; }
-        .close-button {
-            color: #aaa;
-            position: absolute;
-            top: 10px;
-            right: 20px;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .close-button:hover, .close-button:focus { color: black; }
-        .modal-text-content {
-            /*max-height: 60vh;
-            overflow-y: auto;*/
-            background-color: #f9f9f9;
-            border: 1px solid #ddd;
-            padding: 10px;
-            border-radius: 4px;
-            white-space: pre-wrap;
-        }
-        .entry-nazwa-link {
-            cursor: pointer;
-            color: #075985;
-            text-decoration: underline;
-        }
-        .entry-nazwa-link:hover { color: #0ea5e9; }
+        .close-button { color: #aaa; position: absolute; top: 10px; right: 20px; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .modal-text-content { background-color: #f9f9f9; border: 1px solid #ddd; padding: 10px; border-radius: 4px; white-space: pre-wrap; }
+        .entry-nazwa-link { cursor: pointer; color: #075985; text-decoration: underline; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <button id="help-button" class="help-button" title="Informacje na temat aplikacji">Pomoc</button>
-        <h1>📜 Wyszukiwarka informacji w SGKP</h1>
+        <div class="lang-switch">
+            <button type="button" class="lang-btn active" onclick="setLanguage('pl')">PL</button>
+            <button type="button" class="lang-btn" onclick="setLanguage('en')">EN</button>
+        </div>
+
+        <button id="help-button" class="help-button" title="Informacje na temat aplikacji" data-i18n-title="help_tooltip" data-i18n="help_btn">Pomoc</button>
+        <h1 data-i18n="main_title">📜 Wyszukiwarka informacji w SGKP</h1>
 
         <form id="search-form">
             <div class="slider-container">
-                <label for="semantic-slider">Balans Słów Kluczowych i Semantyki: <span id="slider-value">0%</span></label>
+                <label for="semantic-slider"><span data-i18n="slider_label">Balans Słów Kluczowych i Semantyki:</span> <span id="slider-value">0%</span></label>
                 <input type="range" id="semantic-slider" name="ratio" min="0" max="100" value="0">
             </div>
 
             <div class="search-form">
-                <input type="text" id="search-input" placeholder="np. 'mielenie ziarna'...">
-                <button type="submit" title="Wyszukiwanie według podanych parametrów">Szukaj</button>
-                <button type="button" id="reset-button" title="Wyczyść wyniki">Wyczyść</button>
+                <input type="text" id="search-input" placeholder="np. 'mielenie ziarna'..." data-i18n-placeholder="search_placeholder">
+                <button type="submit" title="Wyszukiwanie według podanych parametrów" data-i18n-title="search_tooltip" data-i18n="search_btn">Szukaj</button>
+                <button type="button" id="reset-button" title="Wyczyść wyniki" data-i18n-title="reset_tooltip" data-i18n="reset_btn">Wyczyść</button>
             </div>
         </form>
 
-        <div class="disclaimer-text">
+        <div class="disclaimer-text" data-i18n="disclaimer">
             * Mechanizm wyszukiwania znajduje się obecnie na wczesnym etapie testów, wyniki mogą być niekompletne lub niedokładne. Zapoznaj się z instrukcjami (Pomoc).
         </div>
 
@@ -229,13 +106,13 @@
         <div id="results"></div>
 
         <div id="pagination" class="pagination-container">
-            <button id="first-page" type="button" title="Idź do pierwszej strony wyników">&laquo; Pierwsza</button>
-            <button id="prev-page" type="button" title="Idź do poprzedniej strony wyników">Poprzednia</button>
+            <button id="first-page" type="button" title="Idź do pierwszej strony wyników" data-i18n-title="pagination_first" data-i18n="pagination_first_text">&laquo; Pierwsza</button>
+            <button id="prev-page" type="button" title="Idź do poprzedniej strony wyników" data-i18n-title="pagination_prev" data-i18n="pagination_prev_text">Poprzednia</button>
 
             <span id="pagination-info" class="pagination-info">Strona 1</span>
 
-            <button id="next-page" type="button" title="Idź do następnej strony wyników">Następna</button>
-            <button id="last-page" type="button" title="Idź do ostatniej strony wyników">Ostatnia &raquo;</button>
+            <button id="next-page" type="button" title="Idź do następnej strony wyników" data-i18n-title="pagination_next" data-i18n="pagination_next_text">Następna</button>
+            <button id="last-page" type="button" title="Idź do ostatniej strony wyników" data-i18n-title="pagination_last" data-i18n="pagination_last_text">Ostatnia &raquo;</button>
         </div>
     </div>
 
@@ -249,9 +126,10 @@
     <div id="help-modal" class="modal">
         <div class="modal-content">
             <span class="close-button" id="close-help-button">&times;</span>
-            <h2>Pomoc</h2>
-            <p>Witaj w wyszukiwarce wektorowej SGKP!</p>
-            <p>SGKP czyli <a href="https://pl.wikipedia.org/wiki/S%C5%82ownik_geograficzny_Kr%C3%B3lestwa_Polskiego" target="_blank">Słownik Geograficzny Królestwa Polskiego</a><br>
+            <div id="help-content-pl" class="help-lang-content">
+                <h2>Pomoc</h2>
+                <p>Witaj w wyszukiwarce wektorowej SGKP!</p>
+                <p>SGKP czyli <a href="https://pl.wikipedia.org/wiki/S%C5%82ownik_geograficzny_Kr%C3%B3lestwa_Polskiego" target="_blank">Słownik Geograficzny Królestwa Polskiego</a><br>
             Uwaga: aplikacja zawiera obecnie wstępnie przetworzoną treść Słownika, mogą występować literówki, błędy w podziale treści haseł itp.
             </p>
             <p><strong>Jak szukać:</strong></p>
@@ -270,10 +148,154 @@
                 <li>Dla każdego hasła na liście wyników wyświetlany jest numer tomu i numer strony na której zaczyna się dane hasło w wersji drukowanej, numer strony jest linkiem, który prowadzi do skanu strony na serwerach ICM (Interdyscyplinarnego Centrum Modelowania Matematycznego i Komputerowego UW).</li>
                 <li>Użyj przycisku "Wyczyść", aby zresetować widok.</li>
             </ul>
+            </div>
+
+            <div id="help-content-en" class="help-lang-content" style="display: none;">
+                <h2>Help</h2>
+                <p>Welcome to the SGKP Search!</p>
+                <p>SGKP stands for the <a href="https://en.wikipedia.org/wiki/Geographical_Dictionary_of_the_Kingdom_of_Poland" target="_blank">Geographical Dictionary of the Kingdom of Poland</a>.<br>
+                Note: The application contains pre-processed dictionary content; typos may occur.</p>
+                <p><strong>How to search:</strong></p>
+                <ul style="margin-top: -10px;">
+                    <li>Enter a phrase in the search box, e.g., "mielenie ziarna", "Karaim", "browar piwo", "Namysłów", "młyn parowy", "Poniatowski", without quotation marks; the version with quotation marks for multiple words would mean searching for the exact phrase. For example, you can compare the search results for: Stanisław August Poniatowski (3,000 results) and ‘Stanisław August Poniatowski’ (6 results).</li>
+                    <li>Press ‘Search’ or the Enter key.</li>
+                   <li>The search engine uses hybrid search, combining keywords with vector (semantic) search to give the best results. The ‘Keyword and Semantics Balance’ slider setting determines the influence of each type of search on the result. The default setting of 0% means searching only by keywords, while the setting of 100% means experimental vector (semantic) search only.
+                <li>Keyword search looks for terms that contain the words entered in the search field, with a certain degree of tolerance, i.e. entering the word ‘młyny’ will return results containing both that word and “młyn”, ‘młynom’, etc.
+                <li>Vector (semantic) search searches for terms according to the meaning of the words entered, so the phrase ‘mielenie ziarna’ will return terms containing the words mill and mills. The same phrase entered with the keyword-only search setting will return terms containing the word ‘grinding’. </li>
+                <li>Semantic search does not answer questions (like a chat with a language model), it only returns results with a meaning similar to the query, and does not return a complete, precise list of information. </li>
+            </ul>
+            <p><strong>Results:</strong></p>
+            <ul style="margin-top: -10px;">
+                <li>If there are more than 20 results, the application displays the results divided into pages, with buttons at the bottom of the results list for navigating between pages.
+                <li>Click on the title (label) of the result to see more details in a separate window. </li>
+                <li>For each entry in the results list, the volume number and page number where the entry begins in the printed version are displayed. The page number is a link that leads to a scan of the page on the ICM (Interdisciplinary Centre for Mathematical and Computational Modelling, University of Warsaw) servers. </li>
+                <li>Use the ‘Clear’ button to reset the view. </li>
+                </ul>
+            </div>
         </div>
     </div>
 
     <script>
+        // --- SŁOWNIK TŁUMACZEŃ ---
+        const dictionary = {
+            pl: {
+                main_title: "📜 Wyszukiwarka informacji w SGKP",
+                help_btn: "Pomoc",
+                help_tooltip: "Informacje na temat aplikacji",
+                slider_label: "Balans Słów Kluczowych i Semantyki:",
+                search_placeholder: "np. 'mielenie ziarna'...",
+                search_btn: "Szukaj",
+                search_tooltip: "Wyszukiwanie według podanych parametrów",
+                reset_btn: "Wyczyść",
+                reset_tooltip: "Wyczyść wyniki",
+                disclaimer: "* Mechanizm wyszukiwania znajduje się obecnie na wczesnym etapie testów, wyniki mogą być niekompletne lub niedokładne. Zapoznaj się z instrukcjami (Pomoc).",
+                pagination_first: "Idź do pierwszej strony wyników",
+                pagination_first_text: "&laquo; Pierwsza",
+                pagination_prev: "Idź do poprzedniej strony wyników",
+                pagination_prev_text: "Poprzednia",
+                pagination_next: "Idź do następnej strony wyników",
+                pagination_next_text: "Następna",
+                pagination_last: "Idź do ostatniej strony wyników",
+                pagination_last_text: "Ostatnia &raquo;",
+                // Dynamic labels
+                lbl_vol: "Tom",
+                lbl_page: "strona",
+                lbl_district: "powiat",
+                lbl_parish: "parafia katolicka",
+                lbl_type: "typ punktu osadniczego",
+                lbl_sacral: "obiekty sakralne",
+                lbl_industrial: "obiekty przemysłowe",
+                lbl_results: "Pokazuję wyniki",
+                lbl_of: "z ok.",
+                lbl_no_results: "Brak wyników.",
+                lbl_searching: "Wyszukiwanie...",
+                lbl_error: "Błąd podczas pobierania wyników.",
+                lbl_page_count: "Strona"
+            },
+            en: {
+                main_title: "📜 SGKP Search",
+                help_btn: "Help",
+                help_tooltip: "Information about the application",
+                slider_label: "Keyword vs Semantic Balance:",
+                search_placeholder: "e.g., 'mielenie ziarna'...",
+                search_btn: "Search",
+                search_tooltip: "Search using provided parameters",
+                reset_btn: "Clear",
+                reset_tooltip: "Clear results",
+                disclaimer: "* The search mechanism is in early testing; results may be incomplete or inaccurate. Please read the instructions (Help).",
+                pagination_first: "Go to first page",
+                pagination_first_text: "&laquo; First",
+                pagination_prev: "Go to previous page",
+                pagination_prev_text: "Prev",
+                pagination_next: "Go to next page",
+                pagination_next_text: "Next",
+                pagination_last: "Go to last page",
+                pagination_last_text: "Last &raquo;",
+                // Dynamic labels
+                lbl_vol: "Vol",
+                lbl_page: "page",
+                lbl_district: "district",
+                lbl_parish: "catholic parish",
+                lbl_type: "settlement type",
+                lbl_sacral: "sacral objects",
+                lbl_industrial: "industrial objects",
+                lbl_results: "Showing results",
+                lbl_of: "of approx.",
+                lbl_no_results: "No results found.",
+                lbl_searching: "Searching...",
+                lbl_error: "Error retrieving results.",
+                lbl_page_count: "Page"
+            }
+        };
+
+        let currentLang = localStorage.getItem('sgkp_lang') || 'pl';
+
+        function t(key) {
+            return dictionary[currentLang][key] || key;
+        }
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('sgkp_lang', lang);
+
+            // Update buttons state
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.innerText.toLowerCase() === lang);
+            });
+
+            // Translate static elements
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                el.innerHTML = t(key);
+            });
+            document.querySelectorAll('[data-i18n-title]').forEach(el => {
+                const key = el.getAttribute('data-i18n-title');
+                el.title = t(key);
+            });
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                el.placeholder = t(key);
+            });
+
+            // Toggle Help Content
+            document.getElementById('help-content-pl').style.display = lang === 'pl' ? 'block' : 'none';
+            document.getElementById('help-content-en').style.display = lang === 'en' ? 'block' : 'none';
+
+            // Refresh results text if present
+            if (document.getElementById('results').children.length > 0) {
+                 // Re-render current results to apply translations to dynamic labels
+                 // Note: requires saving lastData globally or simplified refresh.
+                 // For simplicity: Update Info text only or re-trigger logic if feasible.
+                 // Ideally, we just update static text. Dynamic results update on next search or we could store `lastResultData`.
+                 if(typeof lastResultData !== 'undefined') {
+                     displayResults(lastResultData);
+                     updatePagination(lastResultData);
+                 }
+            }
+        }
+
+        // --- ISTNIEJĄCY KOD Z MODYFIKACJAMI ---
+
         const form = document.getElementById('search-form');
         const input = document.getElementById('search-input');
         const slider = document.getElementById('semantic-slider');
@@ -281,7 +303,6 @@
         const resultsContainer = document.getElementById('results');
         const resultsInfo = document.getElementById('results-info');
         const resetButton = document.getElementById('reset-button');
-
         // Paginacja
         const paginationContainer = document.getElementById('pagination');
         const firstPageBtn = document.getElementById('first-page');
@@ -297,11 +318,14 @@
         const helpModal = document.getElementById('help-modal');
         const closeHelpButton = document.getElementById('close-help-button');
 
-        // Zmienne stanu
         let currentPage = 1;
         let totalPages = 0;
         const resultsPerPage = 20;
         let currentQuery = '';
+        let lastResultData = null; // Do ponownego renderowania przy zmianie języka
+
+        // Inicializacja języka na starcie
+        setLanguage(currentLang);
 
         function resetApplication() {
             input.value = '';
@@ -309,10 +333,10 @@
             resultsInfo.textContent = '';
             paginationContainer.style.display = 'none';
             currentPage = 1;
+            lastResultData = null;
             input.focus();
         }
 
-        // Mapa konwersji numerów tomów z formatu "01" na rzymskie "I"
         const volumeToRoman = {
             '01': 'I', '02': 'II', '03': 'III', '04': 'IV', '05': 'V',
             '1': 'I', '2': 'II', '3': 'III', '4': 'IV', '5': 'V',
@@ -323,10 +347,8 @@
         };
 
         function generateScanLink(tom, strona) {
-            // Sprawdzamy czy mamy odpowiednik rzymski, jeśli nie (błąd danych), zwracamy null
             const romanVolume = volumeToRoman[tom];
             if (!romanVolume || !strona) return null;
-
             return `http://dir.icm.edu.pl/Slownik_geograficzny/Tom_${romanVolume}/${strona}`;
         }
 
@@ -335,33 +357,31 @@
             const ratio = slider.value;
             if (!query) { return; }
 
-            // Jeśli zapytanie się zmieniło, resetujemy na 1 stronę (chyba że to wywołanie z paginacji)
             if (query !== currentQuery) {
-               // currentPage = 1; // Ta logika jest już obsłużona w submit form
                currentQuery = query;
             }
 
-            resultsInfo.textContent = 'Wyszukiwanie...';
+            resultsInfo.textContent = t('lbl_searching');
 
             try {
-                // Dodajemy parametr page
                 const params = new URLSearchParams({ q: query, ratio: ratio, page: page });
                 const response = await fetch(`search?${params}`);
                 const data = await response.json();
 
-                currentPage = page; // Aktualizuj aktualną stronę po udanym pobraniu
+                currentPage = page;
+                lastResultData = data; // Zapisz dane
                 displayResults(data);
-                updatePagination(data); // Aktualizuj przyciski
+                updatePagination(data);
 
             } catch (error) {
-                resultsInfo.textContent = 'Błąd podczas pobierania wyników.';
+                resultsInfo.textContent = t('lbl_error');
                 console.error('Wyszukiwanie nie powiodło się:', error);
             }
         }
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            currentPage = 1; // Nowe wyszukiwanie zawsze od strony 1
+            currentPage = 1;
             performSearch(currentPage);
         });
 
@@ -369,54 +389,28 @@
             sliderValueSpan.textContent = `${slider.value}%`;
         });
 
-        // Obsługa przycisków paginacji
-        // Pierwsza strona
-        firstPageBtn.addEventListener('click', () => {
-            if (currentPage > 1) {
-                performSearch(1);
-            }
-        });
+        // Event listenery paginacji bez zmian
+        firstPageBtn.addEventListener('click', () => { if (currentPage > 1) performSearch(1); });
+        prevPageBtn.addEventListener('click', () => { if (currentPage > 1) performSearch(currentPage - 1); });
+        nextPageBtn.addEventListener('click', () => { if (currentPage < totalPages) performSearch(currentPage + 1); });
+        lastPageBtn.addEventListener('click', () => { if (currentPage < totalPages) performSearch(totalPages); });
 
-        // Poprzednia strona
-        prevPageBtn.addEventListener('click', () => {
-            if (currentPage > 1) {
-                performSearch(currentPage - 1);
-            }
-        });
-
-        // Następna strona
-        nextPageBtn.addEventListener('click', () => {
-            if (currentPage < totalPages) {
-                performSearch(currentPage + 1);
-            }
-        });
-
-        // Ostatnia strona
-        lastPageBtn.addEventListener('click', () => {
-            if (currentPage < totalPages) {
-                performSearch(totalPages);
-            }
-        });
-
-        // Funkcja aktualizująca stan przycisków
         function updatePagination(data) {
             const totalHits = data.estimatedTotalHits;
             totalPages = Math.ceil(totalHits / resultsPerPage);
 
             if (totalHits > 0) {
                 paginationContainer.style.display = 'flex';
-                paginationInfo.textContent = `Strona ${currentPage} z ${totalPages}`;
+                // TŁUMACZENIE PAGINACJI
+                paginationInfo.textContent = `${t('lbl_page_count')} ${currentPage} / ${totalPages}`;
 
-                // Jeśli jesteśmy na pierwszej stronie, blokujemy "Pierwsza" i "Poprzednia"
                 const isFirst = currentPage === 1;
                 firstPageBtn.disabled = isFirst;
                 prevPageBtn.disabled = isFirst;
 
-                // Jeśli jesteśmy na ostatniej stronie, blokujemy "Następna" i "Ostatnia"
                 const isLast = currentPage === totalPages || totalPages === 0;
                 nextPageBtn.disabled = isLast;
                 lastPageBtn.disabled = isLast;
-
             } else {
                 paginationContainer.style.display = 'none';
             }
@@ -428,13 +422,13 @@
             const total = data.estimatedTotalHits;
             const time = data.processingTimeMs;
 
-            // Obliczanie zakresu wyświetlania (np. 1-20)
             const start = (currentPage - 1) * resultsPerPage + 1;
             let end = currentPage * resultsPerPage;
             if (end > total) end = total;
 
             if (data.hits && data.hits.length > 0) {
-                 resultsInfo.textContent = `Pokazuję wyniki ${start}-${end} z ok. ${total} (${time}ms).`;
+                 // TŁUMACZENIE INFO O WYNIKACH
+                 resultsInfo.textContent = `${t('lbl_results')} ${start}-${end} ${t('lbl_of')} ${total} (${time}ms).`;
 
                 data.hits.forEach(hit => {
                     const item = document.createElement('div');
@@ -443,20 +437,21 @@
                     let typyHtml = '';
                     if (hit.typ_punktu_osadniczego && hit.typ_punktu_osadniczego.length > 0) {
                         const typyTags = hit.typ_punktu_osadniczego.map(typ => `<span class="typy-tag">${typ}</span>`).join(',');
-                        typyHtml = `<div class="typy-container">typ punktu osadniczego: ${typyTags}</div>`;
+                        // TŁUMACZENIE LABELI DYNAMICZNYCH
+                        typyHtml = `<div class="typy-container">${t('lbl_type')}: ${typyTags}</div>`;
                     }
 
-                    // Generowanie linku do skanu
                     const scanLink = generateScanLink(hit.tom, hit.strona);
                     const stronaHtml = scanLink
                         ? `<a href="${scanLink}" target="_blank" title="Zobacz skan strony" style="color:#0ea5e9;">${hit.strona}</a>`
                         : hit.strona;
 
+                    // TŁUMACZENIE LABELI W ITEMIE
                     item.innerHTML = `
                         <h3 class="entry-nazwa-link" data-id="${hit.ID}">${hit.nazwa}</h3>
-                        <p class="info-tom">Tom: ${hit.tom}, strona: ${stronaHtml}</p>
-                        ${hit.powiat_ujednolicony ? `<p class="info">powiat: ${hit.powiat_ujednolicony}</p>` : ''}
-                        ${hit.parafia_katolicka ? `<p class="info">parafia katolicka: ${hit.parafia_katolicka}</p>` : ''}
+                        <p class="info-tom">${t('lbl_vol')}: ${hit.tom}, ${t('lbl_page')}: ${stronaHtml}</p>
+                        ${hit.powiat_ujednolicony ? `<p class="info">${t('lbl_district')}: ${hit.powiat_ujednolicony}</p>` : ''}
+                        ${hit.parafia_katolicka ? `<p class="info">${t('lbl_parish')}: ${hit.parafia_katolicka}</p>` : ''}
                         ${typyHtml}
                         <p class="smallinfo">RankingScore: ${(hit._rankingScore ? hit._rankingScore.toFixed(2) : 'N/A')}</p>
                         <p>${hit._formatted ? hit._formatted.text : hit.text}</p>
@@ -464,38 +459,36 @@
                     resultsContainer.appendChild(item);
                 });
             } else {
-                resultsContainer.innerHTML = '<p>Brak wyników.</p>';
+                resultsContainer.innerHTML = `<p>${t('lbl_no_results')}</p>`;
                 resultsInfo.textContent = '';
                 paginationContainer.style.display = 'none';
             }
         }
 
-        // Reszta funkcji (openModal, closeModal, etc.) pozostaje bez zmian jak w oryginale
         async function openModal(entryId) {
             try {
                 const response = await fetch(`entry/${entryId}`);
-                if (!response.ok) { throw new Error('Nie można załadować danych.'); }
+                if (!response.ok) { throw new Error(t('lbl_error')); }
                 const entry = await response.json();
 
                 let typyHtml = '';
                 if (entry.typ_punktu_osadniczego && entry.typ_punktu_osadniczego.length > 0) {
                     const typyTags = entry.typ_punktu_osadniczego.map(typ => `<span class="typy-tag">${typ}</span>`).join(', ');
-                    typyHtml = `<div class="typy-container">typ punktu osadniczego: ${typyTags}</div>`;
+                    typyHtml = `<div class="typy-container">${t('lbl_type')}: ${typyTags}</div>`;
                 }
 
                 let obiektySakralneHTML = '';
                 if (entry.obiekty_sakralne && entry.obiekty_sakralne.length > 0) {
                     const sakralneTags = entry.obiekty_sakralne.map(obiekt => `<span class="typy-tag">${obiekt}</span>`).join(', ');
-                    obiektySakralneHTML = `<div class="typy-container">obiekty sakralne: ${sakralneTags}</div>`;
+                    obiektySakralneHTML = `<div class="typy-container">${t('lbl_sacral')}: ${sakralneTags}</div>`;
                 }
 
                 let przemysloweHTML = '';
                 if (entry.przemyslowe && entry.przemyslowe.length > 0) {
                     const przemysloweTags = entry.przemyslowe.map(obiekt => `<span class="typy-tag">${obiekt}</span>`).join(', ');
-                    przemysloweHTML = `<div class="typy-container">obiekty przemysłowe: ${przemysloweTags}</div>`;
+                    przemysloweHTML = `<div class="typy-container">${t('lbl_industrial')}: ${przemysloweTags}</div>`;
                 }
 
-                // Generowanie linku do skanu - dla okienka modalnego
                 const scanLink = generateScanLink(entry.tom, entry.strona);
                 const stronaHtml = scanLink
                     ? `<a href="${scanLink}" target="_blank" title="Zobacz skan strony" style="color:#0ea5e9;">${entry.strona}</a>`
@@ -504,9 +497,9 @@
                 modalBody.innerHTML = `
                     <h2>${entry.nazwa}</h2>
                     ${entry.ID ? `<p class="info">ID: ${entry.ID}</p>` : ''}
-                    <p class="info-tom">Tom: ${entry.tom}, strona: ${stronaHtml}</p>
-                    ${entry.powiat_ujednolicony ? `<p class="info">powiat: ${entry.powiat_ujednolicony}</p>` : ''}
-                    ${entry.parafia_katolicka ? `<p class="info">parafia katolicka: ${entry.parafia_katolicka}</p>` : ''}
+                    <p class="info-tom">${t('lbl_vol')}: ${entry.tom}, ${t('lbl_page')}: ${stronaHtml}</p>
+                    ${entry.powiat_ujednolicony ? `<p class="info">${t('lbl_district')}: ${entry.powiat_ujednolicony}</p>` : ''}
+                    ${entry.parafia_katolicka ? `<p class="info">${t('lbl_parish')}: ${entry.parafia_katolicka}</p>` : ''}
                     ${typyHtml}
                     ${obiektySakralneHTML}
                     ${przemysloweHTML}
@@ -519,14 +512,10 @@
             }
         }
 
-        function closeModal() {
-            modal.style.display = 'none';
-            modalBody.innerHTML = '';
-        }
-
+        // Reszta funkcji obsługi modali bez zmian...
+        function closeModal() { modal.style.display = 'none'; modalBody.innerHTML = ''; }
         helpButton.addEventListener('click', () => { helpModal.style.display = 'block'; });
         closeHelpButton.addEventListener('click', () => { helpModal.style.display = 'none'; });
-
         resultsContainer.addEventListener('click', (e) => {
             if (e.target && e.target.classList.contains('entry-nazwa-link')) {
                 e.preventDefault();
@@ -534,25 +523,16 @@
                 openModal(entryId);
             }
         });
-
         resetButton.addEventListener('click', resetApplication);
         closeButton.addEventListener('click', closeModal);
         window.addEventListener('click', (e) => {
             if (e.target === modal) closeModal();
             if (e.target === helpModal) helpModal.style.display = 'none';
         });
-
-        // Obsługa klawisza ESC do zamykania okienek modalnych
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') {
-                // Jeśli otwarte jest okienko ze szczegółami hasła
-                if (modal.style.display === 'block') {
-                    closeModal();
-                }
-                // Jeśli otwarte jest okienko pomocy
-                if (helpModal.style.display === 'block') {
-                    helpModal.style.display = 'none';
-                }
+                if (modal.style.display === 'block') closeModal();
+                if (helpModal.style.display === 'block') helpModal.style.display = 'none';
             }
         });
     </script>
