@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wyszukiwanie SGKP / SGKP Search</title>
     <style>
-        /* ... Twoje istniejące style ... */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; color: #1c1e21; line-height: 1.6; }
         .container {
             max-width: 1200px;
@@ -17,9 +16,7 @@
             position: relative;
         }
         h1 { text-align: center; color: #0c4a6e; }
-        /* ... reszta stylów bez zmian ... */
 
-        /* NOWE STYLE DLA PRZEŁĄCZNIKA JĘZYKA */
         .lang-switch {
             position: absolute;
             top: 2rem;
@@ -42,7 +39,6 @@
             border-color: #0c4a6e;
         }
 
-        /* Zachowujemy style reszty elementów */
         .search-form { display: flex; gap: 10px; margin-bottom: 2rem; }
         #search-input { flex-grow: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
         button { padding: 12px 20px; background-color: #0ea5e9; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; }
@@ -176,7 +172,7 @@
     </div>
 
     <script>
-        // --- SŁOWNIK TŁUMACZEŃ ---
+
         const dictionary = {
             pl: {
                 main_title: "📜 Wyszukiwarka informacji w SGKP",
@@ -197,7 +193,7 @@
                 pagination_next_text: "Następna",
                 pagination_last: "Idź do ostatniej strony wyników",
                 pagination_last_text: "Ostatnia &raquo;",
-                // Dynamic labels
+                // dynamiczne etykiety
                 lbl_vol: "Tom",
                 lbl_page: "strona",
                 lbl_district: "powiat",
@@ -231,7 +227,7 @@
                 pagination_next_text: "Next",
                 pagination_last: "Go to last page",
                 pagination_last_text: "Last &raquo;",
-                // Dynamic labels
+                // dynamiczne etykiety
                 lbl_vol: "Vol",
                 lbl_page: "page",
                 lbl_district: "district",
@@ -263,7 +259,7 @@
                 btn.classList.toggle('active', btn.innerText.toLowerCase() === lang);
             });
 
-            // Translate static elements
+            // tłumaczenie elementów statycznych
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
                 el.innerHTML = t(key);
@@ -277,24 +273,18 @@
                 el.placeholder = t(key);
             });
 
-            // Toggle Help Content
+            // Pomoc, zależnie od wersji językowej
             document.getElementById('help-content-pl').style.display = lang === 'pl' ? 'block' : 'none';
             document.getElementById('help-content-en').style.display = lang === 'en' ? 'block' : 'none';
 
-            // Refresh results text if present
+            // odświeżanie
             if (document.getElementById('results').children.length > 0) {
-                 // Re-render current results to apply translations to dynamic labels
-                 // Note: requires saving lastData globally or simplified refresh.
-                 // For simplicity: Update Info text only or re-trigger logic if feasible.
-                 // Ideally, we just update static text. Dynamic results update on next search or we could store `lastResultData`.
                  if(typeof lastResultData !== 'undefined') {
                      displayResults(lastResultData);
                      updatePagination(lastResultData);
                  }
             }
         }
-
-        // --- ISTNIEJĄCY KOD Z MODYFIKACJAMI ---
 
         const form = document.getElementById('search-form');
         const input = document.getElementById('search-input');
@@ -322,9 +312,8 @@
         let totalPages = 0;
         const resultsPerPage = 20;
         let currentQuery = '';
-        let lastResultData = null; // Do ponownego renderowania przy zmianie języka
+        let lastResultData = null; // do ponownego renderowania przy zmianie języka
 
-        // Inicializacja języka na starcie
         setLanguage(currentLang);
 
         function resetApplication() {
@@ -369,7 +358,7 @@
                 const data = await response.json();
 
                 currentPage = page;
-                lastResultData = data; // Zapisz dane
+                lastResultData = data;
                 displayResults(data);
                 updatePagination(data);
 
@@ -389,7 +378,6 @@
             sliderValueSpan.textContent = `${slider.value}%`;
         });
 
-        // Event listenery paginacji bez zmian
         firstPageBtn.addEventListener('click', () => { if (currentPage > 1) performSearch(1); });
         prevPageBtn.addEventListener('click', () => { if (currentPage > 1) performSearch(currentPage - 1); });
         nextPageBtn.addEventListener('click', () => { if (currentPage < totalPages) performSearch(currentPage + 1); });
@@ -401,7 +389,6 @@
 
             if (totalHits > 0) {
                 paginationContainer.style.display = 'flex';
-                // TŁUMACZENIE PAGINACJI
                 paginationInfo.textContent = `${t('lbl_page_count')} ${currentPage} / ${totalPages}`;
 
                 const isFirst = currentPage === 1;
@@ -427,7 +414,6 @@
             if (end > total) end = total;
 
             if (data.hits && data.hits.length > 0) {
-                 // TŁUMACZENIE INFO O WYNIKACH
                  resultsInfo.textContent = `${t('lbl_results')} ${start}-${end} ${t('lbl_of')} ${total} (${time}ms).`;
 
                 data.hits.forEach(hit => {
@@ -437,7 +423,6 @@
                     let typyHtml = '';
                     if (hit.typ_punktu_osadniczego && hit.typ_punktu_osadniczego.length > 0) {
                         const typyTags = hit.typ_punktu_osadniczego.map(typ => `<span class="typy-tag">${typ}</span>`).join(',');
-                        // TŁUMACZENIE LABELI DYNAMICZNYCH
                         typyHtml = `<div class="typy-container">${t('lbl_type')}: ${typyTags}</div>`;
                     }
 
@@ -446,7 +431,6 @@
                         ? `<a href="${scanLink}" target="_blank" title="Zobacz skan strony" style="color:#0ea5e9;">${hit.strona}</a>`
                         : hit.strona;
 
-                    // TŁUMACZENIE LABELI W ITEMIE
                     item.innerHTML = `
                         <h3 class="entry-nazwa-link" data-id="${hit.ID}">${hit.nazwa}</h3>
                         <p class="info-tom">${t('lbl_vol')}: ${hit.tom}, ${t('lbl_page')}: ${stronaHtml}</p>
@@ -512,7 +496,6 @@
             }
         }
 
-        // Reszta funkcji obsługi modali bez zmian...
         function closeModal() { modal.style.display = 'none'; modalBody.innerHTML = ''; }
         helpButton.addEventListener('click', () => { helpModal.style.display = 'block'; });
         closeHelpButton.addEventListener('click', () => { helpModal.style.display = 'none'; });
