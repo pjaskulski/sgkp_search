@@ -136,7 +136,7 @@ async function search(page = 1) {
   $("results").replaceChildren();
   $("pagination").hidden = true;
   try {
-    const data = await api("/api/v1/search?" + params);
+    const data = await api("api/v1/search?" + params);
     if (current !== state.request) return;
     state.page = data.page;
     state.hasNext = data.has_next;
@@ -192,7 +192,7 @@ function fillSelect(id, values) {
 }
 async function loadFilterOptions() {
   try {
-    const data = await api("/api/v1/filter-options");
+    const data = await api("api/v1/filter-options");
     const options = data.options || {};
     for (const id of optionFields) fillSelect(id, options[id] || []);
     state.gminas = (options.gmina || []).filter(value =>
@@ -346,7 +346,7 @@ function renderEntry() {
 }
 async function openEntry(id, start, end) {
   try {
-    state.entry = await api("/api/v1/entries/" + encodeURIComponent(id));
+    state.entry = await api("api/v1/entries/" + encodeURIComponent(id));
     state.highlight = Number.isInteger(start) && Number.isInteger(end) ? [start, end] : null;
     renderEntry();
     if (!$("entry-dialog").open) $("entry-dialog").showModal();
@@ -354,7 +354,7 @@ async function openEntry(id, start, end) {
   } catch (error) { window.alert(error.message); }
 }
 async function askChat(question, filters, history, answerNode, sourcesNode, statusNode, signal) {
-  const response = await fetch("/api/v1/chat", {
+  const response = await fetch("api/v1/chat", {
     method: "POST",
     headers: {"Content-Type": "application/json", "Accept": "text/event-stream"},
     body: JSON.stringify({question, filters, history}), signal
@@ -451,7 +451,7 @@ async function exportChatPdf() {
   const button = $("export-pdf");
   button.disabled = true;
   try {
-    const response = await fetch("/api/v1/chat/export", {
+    const response = await fetch("api/v1/chat/export", {
       method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify({turns: state.exportTurns})
     });
