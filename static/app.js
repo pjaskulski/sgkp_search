@@ -2,8 +2,10 @@
 
 const $ = id => document.getElementById(id);
 const optionFields = ["tom", "powiat_ujednolicony", "typ_punktu_osadniczego", "gubernia_ujednolicona"];
+const CHAT_HISTORY_TURNS = 8;
+const CHAT_HISTORY_ANSWER_CHARS = 5000;
 const state = { page: 1, hasNext: false, entry: null, highlight: null, request: 0, gminas: [], chatBusy: false,
-  chatController: null, chatGeneration: 0 };
+  chatController: null, chatGeneration: 0, chatHistory: [], exportTurns: [] };
 
 function setText(node, value) { node.textContent = value == null ? "" : String(value); }
 function element(tag, value, className) {
@@ -351,11 +353,11 @@ async function openEntry(id, start, end) {
     if (state.highlight && !state.entry.rendered_html) $("entry-content").querySelector("mark")?.scrollIntoView({block: "center"});
   } catch (error) { window.alert(error.message); }
 }
-async function askChat(question, filters, answerNode, sourcesNode, statusNode, signal) {
+async function askChat(question, filters, history, answerNode, sourcesNode, statusNode, signal) {
   const response = await fetch("/api/v1/chat", {
     method: "POST",
     headers: {"Content-Type": "application/json", "Accept": "text/event-stream"},
-    body: JSON.stringify({question, filters}), signal
+    body: JSON.stringify({question, filters, history}), signal
   });
   if (!response.ok) {
     let data = {};
@@ -365,7 +367,7 @@ async function askChat(question, filters, answerNode, sourcesNode, statusNode, s
   if (!response.body) throw new Error("Brak strumienia odpowiedzi");
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
-  let buffer = "", complete = false, provider = "local", model = "";
+  let buffer = "", complete = false, provider = "local", model = "", finalAnswer = null;
   while (true) {
     const {value, done} = await reader.read();
     buffer += decoder.decode(value || new Uint8Array(), {stream: !done}).replace(/\r\n/g, "\n");
@@ -378,6 +380,11 @@ async function askChat(question, filters, answerNode, sourcesNode, statusNode, s
       if (!raw) continue;
       const data = JSON.parse(raw);
       if (type === "delta") answerNode.append(document.createTextNode(data.text));
+      else if (type === "retry") {
+        setText(answerNode, "");
+        answerNode.classList.remove("rendered");
+        setText(statusNode, "Odpowiedź przekroczyła początkowy limit. Generuję ją ponownie…");
+      }
       else if (type === "fallback") {
         setText(answerNode, "");
         answerNode.classList.remove("rendered");
@@ -387,6 +394,7 @@ async function askChat(question, filters, answerNode, sourcesNode, statusNode, s
       else if (type === "error") throw new Error(data.error || "Przerwano odpowiedź");
       else if (type === "answer") {
         complete = true;
+        finalAnswer = data;
         provider = data.provider || "local";
         model = data.model || "";
         renderAnswerMarkdown(answerNode, data.answer);
@@ -406,7 +414,7 @@ async function askChat(question, filters, answerNode, sourcesNode, statusNode, s
     if (done) break;
   }
   if (!complete) throw new Error("Odpowiedź została przerwana");
-  return {provider, model};
+  return {...finalAnswer, provider, model};
 }
 function makeTurn(question) {
   const turn = element("article", undefined, "turn");
@@ -428,12 +436,46 @@ function clearChat() {
   state.chatController?.abort();
   state.chatController = null;
   state.chatBusy = false;
+  state.chatHistory = [];
+  state.exportTurns = [];
   $("chat-submit").disabled = false;
+  $("export-pdf").disabled = true;
   $("conversation").replaceChildren();
   $("conversation-actions").hidden = true;
   $("chat-intro").hidden = false;
   $("question").value = "";
   $("question").focus();
+}
+async function exportChatPdf() {
+  if (!state.exportTurns.length) return;
+  const button = $("export-pdf");
+  button.disabled = true;
+  try {
+    const response = await fetch("/api/v1/chat/export", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({turns: state.exportTurns})
+    });
+    if (!response.ok) {
+      let data = {};
+      try { data = await response.json(); } catch {}
+      throw new Error(data.error || "Nie udało się przygotować PDF");
+    }
+    const blob = await response.blob();
+    const name = response.headers.get("Content-Disposition")?.match(/filename="?([\w.-]+)"?/)?.[1]
+      || "sgkp-konwersacja.pdf";
+    const url = URL.createObjectURL(blob);
+    const link = element("a");
+    link.href = url;
+    link.download = name;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  } catch (error) {
+    window.alert(error.message);
+  } finally {
+    button.disabled = state.chatBusy || !state.exportTurns.length;
+  }
 }
 async function submitChat(event) {
   event.preventDefault();
@@ -445,13 +487,21 @@ async function submitChat(event) {
   state.chatController = controller;
   state.chatBusy = true;
   $("chat-submit").disabled = true;
+  $("export-pdf").disabled = true;
   $("chat-intro").hidden = true;
   $("conversation-actions").hidden = false;
   const nodes = makeTurn(question);
   nodes.turn.scrollIntoView({behavior: "smooth", block: "start"});
   try {
-    const result = await askChat(question, activeFilters(), nodes.answer, nodes.sources, nodes.status, controller.signal);
+    const result = await askChat(question, activeFilters(), state.chatHistory, nodes.answer, nodes.sources, nodes.status, controller.signal);
     if (generation !== state.chatGeneration) return;
+    state.chatHistory.push({question, answer: result.answer.slice(0, CHAT_HISTORY_ANSWER_CHARS),
+      source_ids: (result.sources || []).map(source => source.passage_id),
+      source_names: (result.sources || []).map(source => source.nazwa)});
+    state.chatHistory = state.chatHistory.slice(-CHAT_HISTORY_TURNS);
+    state.exportTurns.push({question, answer: result.answer, provider: result.provider, model: result.model,
+      sources: (result.sources || []).map(source => ({citation: source.citation, nazwa: source.nazwa,
+        tom: source.tom, strona: source.strona}))});
     setText(nodes.status, result.provider === "openai"
       ? "Odpowiedź przygotowana przez OpenAI (" + result.model + ") po niedostępności modelu lokalnego."
       : "");
@@ -466,6 +516,7 @@ async function submitChat(event) {
       state.chatBusy = false;
       state.chatController = null;
       $("chat-submit").disabled = false;
+      $("export-pdf").disabled = !state.exportTurns.length;
     }
   }
 }
@@ -506,6 +557,7 @@ async function initialize() {
   for (const id of [...optionFields, "gmina", "kingdom-only"]) $(id).addEventListener("change", () => { updateFilterToggleLabel(); if ($("query").value.trim()) search(1); });
   $("close-dialog").addEventListener("click", () => $("entry-dialog").close());
   $("clear-chat").addEventListener("click", clearChat);
+  $("export-pdf").addEventListener("click", exportChatPdf);
   $("chat-form").addEventListener("submit", submitChat);
   $("question").addEventListener("keydown", event => {
     if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); $("chat-form").requestSubmit(); }

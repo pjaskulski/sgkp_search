@@ -118,13 +118,14 @@
       <div id="chat-intro" class="chat-intro">
         <p class="eyebrow">Przykładowe pytania</p>
         <div class="suggestions">
-          <button type="button" class="suggestion">Jak opisano młyny w okolicach Łowicza?</button>
-          <button type="button" class="suggestion">Co słownik mówi o Warszawie nad Wisłą?</button>
+          <button type="button" class="suggestion">W jakich miejscowościach znajdowały się uzdrowiska?</button>
+          <button type="button" class="suggestion">Czy Okuniew w powiecie warszawskim należał do Królestwa Polskiego?</button>
           <button type="button" class="suggestion">Jakie typy osad wymieniono w powiecie wileńskim?</button>
           <button type="button" class="suggestion">Gdzie leżały Zawady w powiecie warszawskim?</button>
         </div>
       </div>
       <div id="conversation-actions" class="conversation-actions" hidden>
+        <button id="export-pdf" class="button button-outline" type="button" disabled>Pobierz PDF</button>
         <button id="clear-chat" class="text-button" type="button">Wyczyść rozmowę</button>
       </div>
       <div id="conversation" class="conversation" aria-live="polite"></div>
@@ -155,7 +156,7 @@
       </section>
       <section>
         <h3>Konwersacja</h3>
-        <p>Zadaj pytanie o treść słownika. Odpowiedź powstaje na podstawie odnalezionych fragmentów haseł i zawiera odsyłacze do wykorzystanych źródeł. Otwórz cytowane hasła, aby sprawdzić odpowiedź. Gdy model lokalny jest niedostępny, pytanie i znalezione fragmenty są przesyłane do usługi OpenAI; aplikacja oznacza taką odpowiedź. Konwersacja nie służy do sporządzania pełnych zestawień wszystkich miejscowości.</p>
+        <p>Zadaj pytanie o treść słownika. Odpowiedź powstaje na podstawie odnalezionych fragmentów haseł i zawiera odsyłacze do wykorzystanych źródeł. Otwórz cytowane hasła, aby sprawdzić odpowiedź. Możesz zadać pytanie doprecyzowujące odnoszące się do poprzednich odpowiedzi. Przycisk „Pobierz PDF” zapisuje bieżącą konwersację wraz ze źródłami; „Wyczyść rozmowę” usuwa ją z karty przeglądarki. Gdy model lokalny jest niedostępny, bieżące pytanie, krótka historia rozmowy i znalezione fragmenty są przesyłane do usługi OpenAI; aplikacja oznacza taką odpowiedź. Konwersacja nie służy do sporządzania pełnych zestawień wszystkich miejscowości.</p>
       </section>
     </div>
   </dialog>

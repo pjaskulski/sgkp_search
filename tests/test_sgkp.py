@@ -10,7 +10,7 @@ import app as web
 import sgkp_activate
 import sgkp_ingest
 from sgkp_core import file_hash, normalize, passages, validate
-from sgkp_services import OpenAIChat, ServiceError, filter_expression, scan_url
+from sgkp_services import Chat, OpenAIChat, ServiceError, filter_expression, scan_url
 
 
 class SourceTests(unittest.TestCase):
@@ -124,10 +124,36 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(search.call_args_list[0].args[1]["q"], "Zawady")
         self.assertEqual(response.json["sources"][0]["entry_id"], passage["entry_id"])
 
+    def test_chat_reserves_sources_for_each_inflected_place_name(self):
+        self.assertEqual(web.names_in_question("Czy Okuniew należał do Królestwa Polskiego?"),
+                         ["Okuniew", "Królestwa Polskiego"])
+        self.assertEqual(web.names_in_question("Porównaj Warszawę i Kraków."),
+                         ["Warszawę", "Kraków"])
+        self.assertGreater(web.name_match_score("Borysławiu", "Borysław"), 0)
+        self.assertGreater(web.name_match_score("Wieliczce", "Wieliczka"), 0)
+        first = {"passage_id": "01-00001_p0001", "entry_id": "01-00001", "nazwa": "Borysław",
+                 "tom": "01", "strona": 332, "text": "Wydobywano ropę.",
+                 "start_offset": 0, "end_offset": 17}
+        second = {**first, "passage_id": "13-00001_p0001", "entry_id": "13-00001",
+                  "nazwa": "Wieliczka", "tom": "13", "strona": 319, "text": "Wydobywano sól."}
+
+        def search_result(_index, payload):
+            return {"hits": {"Borysław": [first], "Wieliczkę": [], "wieliczk": [second]}
+                    .get(payload["q"], [])}
+
+        with patch.object(web.Meili, "search", side_effect=search_result) as search, \
+             patch.object(web.Chat, "answer", return_value="Borysław [1] i Wieliczka [2]."):
+            response = self.client.post("/api/v1/chat", json={"question": "Co łączy Borysław i Wieliczkę?"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([source["nazwa"] for source in response.json["sources"]],
+                         ["Borysław", "Wieliczka"])
+        self.assertEqual([call.args[1]["q"] for call in search.call_args_list[:3]],
+                         ["Borysław", "Wieliczkę", "wieliczk"])
+
     def test_chat_includes_names_and_pages_for_broader_question(self):
         hits = [{"passage_id": f"01-{number:05d}_p0001", "entry_id": f"01-{number:05d}",
                  "nazwa": f"Uzdrowisko {number}", "tom": "01", "text": "Miejscowość uzdrowiskowa.",
-                 "start_offset": 0, "end_offset": 25} for number in range(1, 21)]
+                 "start_offset": 0, "end_offset": 25} for number in range(1, 26)]
         def search_result(index, payload):
             if index == "passages":
                 return {"hits": hits}
@@ -139,9 +165,175 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(search.call_args_list[0].args[1]["limit"], web.CHAT_SEARCH_LIMIT)
         self.assertEqual(len(search.call_args_list), 1 + web.CHAT_SOURCE_LIMIT)
-        self.assertIn("nazwa=Uzdrowisko 16", answer.call_args.args[0][1]["content"])
-        self.assertNotIn("nazwa=Uzdrowisko 17", answer.call_args.args[0][1]["content"])
+        self.assertIn("nazwa=Uzdrowisko 20", answer.call_args.args[0][1]["content"])
+        self.assertNotIn("nazwa=Uzdrowisko 21", answer.call_args.args[0][1]["content"])
         self.assertEqual(response.json["sources"][0]["strona"], 42)
+
+    def test_followup_uses_previously_cited_passages_as_current_evidence(self):
+        busk = {"passage_id": "01-00001_p0001", "entry_id": "01-00001", "nazwa": "Busk",
+                "tom": "01", "strona": 478, "text": "Busk miał zakład kąpielowy.",
+                "start_offset": 0, "end_offset": 26}
+        warmbrunn = {"passage_id": "13-00001_p0001", "entry_id": "13-00001", "nazwa": "Warmbrunn",
+                     "tom": "13", "strona": 5, "text": "Początek. " + "Inne wiadomości. " * 50 +
+                     "Zakład kąpielowy korzystał z ciepłych źródeł siarczanych.",
+                     "start_offset": 0, "end_offset": 1000}
+        history = [{"question": "W jakich miejscowościach były uzdrowiska?",
+                    "answer": "Busk [1] i Warmbrunn [2].",
+                    "source_ids": [busk["passage_id"], warmbrunn["passage_id"]]}]
+
+        def detail(_source_dir, _lookup_db, identifier):
+            item = {busk["entry_id"]: busk, warmbrunn["entry_id"]: warmbrunn}[identifier]
+            return {"entry": {"ID": item["entry_id"], "nazwa": item["nazwa"], "text": item["text"],
+                              "typ_punktu_osadniczego": ["miejscowość"]},
+                    "tom": item["tom"], "strona": item["strona"]}
+
+        with patch.object(web, "source_detail", side_effect=detail) as source_detail, \
+             patch.object(web.Meili, "search") as search, \
+             patch.object(web.Chat, "answer", side_effect=["TAK", "Warmbrunn miał źródła siarczane [2]."]) as answer:
+            response = self.client.post("/api/v1/chat", json={
+                "question": "W którym z nich były źródła siarczane?", "history": history})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(source_detail.call_count, 2)
+        search.assert_not_called()
+        self.assertEqual([item["nazwa"] for item in response.json["sources"]], ["Warmbrunn"])
+        prompt = answer.call_args.args[0][1]["content"]
+        self.assertIn("W jakich miejscowościach były uzdrowiska?", prompt)
+        self.assertIn("źródeł siarczanych", prompt)
+        self.assertNotIn("Busk [1] i Warmbrunn [2]", prompt)
+
+    def test_inflected_place_name_reuses_both_prior_okuniew_sources(self):
+        entries = {
+            "07-03365": {"ID": "07-03365", "nazwa": "Okuniew",
+                         "text": "Okuniew, pow. warszawski, kościół par. murowany.",
+                         "tom": "07", "strona": 441},
+            "16-09160": {"ID": "16-09160", "nazwa": "Okuniew",
+                         "text": "W roku 1580 wymieniono ibidem sanctuarium.",
+                         "tom": "16", "strona": 404},
+        }
+
+        def detail(_source_dir, _lookup_db, identifier):
+            item = entries[identifier]
+            return {"entry": item, "tom": item["tom"], "strona": item["strona"]}
+
+        history = [{"question": "Czy Okuniew należał do Królestwa Polskiego?",
+                    "answer": "Tak [1][2].",
+                    "source_ids": ["07-03365_p0001", "16-09160_p0001"],
+                    "source_names": ["Okuniew", "Okuniew"]}]
+        with patch.object(web, "source_detail", side_effect=detail), \
+             patch.object(web.Meili, "search", return_value={"hits": []}) as search, \
+             patch.object(web.Chat, "answer", side_effect=["TAK", "Tak, był tam murowany kościół parafialny [1]."]) as answer:
+            response = self.client.post("/api/v1/chat", json={
+                "question": "Czy w Okuniwie znajdował się kościół?", "history": history})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(search.call_args.args[1]["q"], "Okuniew kościół")
+        self.assertEqual(response.json["sources"][0]["entry_id"], "07-03365")
+        self.assertIn("kościół par. murowany", answer.call_args.args[0][1]["content"])
+
+    def test_followup_finds_direct_entry_when_previous_answer_cited_only_supplement(self):
+        supplement = {"ID": "16-09160", "nazwa": "Okuniew", "text": "Wspomniano ibidem sanctuarium.",
+                      "powiat_ujednolicony": "warszawski", "tom": "16", "strona": 404}
+        direct = {"passage_id": "07-03365_p0001", "entry_id": "07-03365", "nazwa": "Okuniew",
+                  "text": "Okuniew, pow. warszawski, kościół par. murowany.",
+                  "powiat_ujednolicony": "warszawski", "tom": "07", "strona": 441}
+        history = [{"question": "Czy Okuniew należał do Królestwa Polskiego?", "answer": "Tak [1].",
+                    "source_ids": ["16-09160_p0001"], "source_names": ["Okuniew"]}]
+        with patch.object(web, "source_detail", return_value={"entry": supplement, "tom": "16", "strona": 404}), \
+             patch.object(web.Meili, "search", return_value={"hits": [direct]}) as search, \
+             patch.object(web.Chat, "answer", side_effect=["TAK", "Tak, istniał kościół murowany [1]."]) as answer:
+            response = self.client.post("/api/v1/chat", json={
+                "question": "Czy w Okuniwie znajdował się kościół?", "history": history})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(search.call_args.args[1]["q"], "Okuniew kościół")
+        self.assertEqual(response.json["sources"][0]["entry_id"], "07-03365")
+        self.assertIn("kościół par. murowany", answer.call_args.args[0][1]["content"])
+
+    def test_chat_rejects_oversized_or_invalid_history(self):
+        turn = {"question": "Gdzie?", "answer": "Tutaj [1].", "source_ids": ["01-00001_p0001"]}
+        self.assertEqual(len(web.validated_chat_history([turn] * web.CHAT_HISTORY_TURNS)), 8)
+        for history in ([turn] * (web.CHAT_HISTORY_TURNS + 1),
+                        [{**turn, "source_ids": ["../sekret"]}],
+                        [{**turn, "source_names": ["Okuniew", "Warszawa"]}],
+                        [{**turn, "answer": "x" * (web.CHAT_HISTORY_ANSWER_CHARS + 1)}]):
+            response = self.client.post("/api/v1/chat", json={"question": "A gdzie?", "history": history})
+            self.assertEqual(response.status_code, 400)
+
+    def test_history_prompt_keeps_recent_turns_within_budget(self):
+        history = [{"question": f"Pytanie {number}", "answer": "x" * 5000, "source_ids": []}
+                   for number in range(8)]
+        prompt = web.history_for_prompt(history)
+        self.assertLessEqual(len(prompt), web.CHAT_HISTORY_PROMPT_CHARS)
+        self.assertIn("Pytanie 7", prompt)
+        self.assertNotIn("Pytanie 0", prompt)
+
+    def test_followup_selects_relevant_later_passage_of_cited_entry(self):
+        detail = {"entry": {"ID": "13-00001", "nazwa": "Warmbrunn",
+                            "text": ("Wiadomości historyczne. " * 80) +
+                            "Zakład kąpielowy korzystał ze źródeł siarczanych."},
+                  "tom": "13", "strona": 5}
+        config = {"source_dir": "/tmp", "lookup_db": "/tmp/lookup.sqlite"}
+        with patch.object(web, "source_detail", return_value=detail):
+            result = web.historical_passage(config, "13-00001_p0001", "Które miało źródła siarczane?")
+        self.assertNotEqual(result["passage_id"], "13-00001_p0001")
+        self.assertIn("źródeł siarczanych", result["text"])
+
+    def test_model_classifies_every_question_with_history_before_search(self):
+        history = [{"question": "Gdzie leżały Zawady?", "answer": "Wśród nich była osada karczemna.",
+                    "source_ids": ["14-03861_a-002_p0001"], "source_names": ["Zawady"]}]
+        with patch.object(web.Chat, "answer", return_value="TAK") as classify:
+            self.assertTrue(web.model_resolves_followup("Czy osada karczemna miała szkołę?", history))
+            self.assertTrue(web.model_resolves_followup("Czy w Zawadach była szkoła?", history))
+        self.assertEqual(classify.call_count, 2)
+        with patch.object(web.Chat, "answer", return_value="NIE") as classify:
+            self.assertFalse(web.model_resolves_followup("Jakie typy osad wymieniono w powiecie wileńskim?", history))
+            self.assertFalse(web.model_resolves_followup("A kiedy powstała Warszawa?", history))
+        self.assertEqual(classify.call_count, 2)
+        with patch.object(web.Chat, "answer", return_value="NIE") as classify:
+            self.assertFalse(web.model_resolves_followup("Czy w Warszawie był kościół?", history))
+        classify.assert_called_once()
+
+    def test_followup_about_second_zawady_uses_previous_element(self):
+        entries = {
+            "14-03861_a-001": {"ID": "14-03861_a-001", "nazwa": "Zawady",
+                                 "text": "1.) wieś i folwark nad Wisłą, gm. Wilanów."},
+            "14-03861_a-002": {"ID": "14-03861_a-002", "nazwa": "Zawady",
+                                 "text": "2.) Z., os. karcz., pow. warszawski, gm. Falenty, par. Raszyn."},
+        }
+
+        def detail(_source_dir, _lookup_db, identifier):
+            return {"entry": entries[identifier], "tom": "14", "strona": 479}
+
+        history = [{"question": "Gdzie leżały Zawady w powiecie warszawskim?",
+                    "answer": "1. Wieś i folwark [1]. 2. Osada karczemna w gminie Falenty [2].",
+                    "source_ids": ["14-03861_a-001_p0001", "14-03861_a-002_p0001"],
+                    "source_names": ["Zawady", "Zawady"]}]
+        with patch.object(web, "source_detail", side_effect=detail), \
+             patch.object(web.Meili, "search") as search, \
+             patch.object(web.Chat, "answer", side_effect=["TAK", "Hasło podaje tylko gminę Falenty i parafię Raszyn [2]."]):
+            response = self.client.post("/api/v1/chat", json={
+                "question": "Czy wiadomo coś więcej o tej osadzie karczemnej?", "history": history})
+        self.assertEqual(response.status_code, 200)
+        search.assert_not_called()
+        self.assertEqual(response.json["sources"][0]["entry_id"], "14-03861_a-002")
+
+    def test_new_topic_after_zawady_uses_fresh_search(self):
+        history = [{"question": "Gdzie leżały Zawady w powiecie warszawskim?",
+                    "answer": "Wieś w Wilanowie [1] i osada karczemna w Falentach [2].",
+                    "source_ids": ["14-03861_a-001_p0001", "14-03861_a-002_p0001"],
+                    "source_names": ["Zawady", "Zawady"]}]
+        wileński = {"passage_id": "15-00001_p0001", "entry_id": "15-00001", "nazwa": "Przykład",
+                    "tom": "15", "strona": 10, "text": "Wieś w powiecie wileńskim.",
+                    "start_offset": 0, "end_offset": 30}
+        with patch.object(web, "source_detail") as detail, \
+             patch.object(web.Meili, "search", return_value={"hits": [wileński]}) as search, \
+             patch.object(web.Chat, "answer", side_effect=["NIE", "Wymieniono wieś [1]."]) as answer:
+            response = self.client.post("/api/v1/chat", json={
+                "question": "Jakie typy osad wymieniono w powiecie wileńskim?", "history": history})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(search.call_args.args[1]["q"], "Jakie typy osad wymieniono w powiecie wileńskim?")
+        detail.assert_not_called()
+        self.assertEqual(answer.call_count, 2)
+        self.assertNotIn("Zawady", answer.call_args.args[0][1]["content"])
+        self.assertEqual(response.json["sources"][0]["entry_id"], "15-00001")
 
     def test_search_returns_cropped_text_without_full_record(self):
         formatted = "…" + web.HIGHLIGHT_START + "Wisłą" + web.HIGHLIGHT_END + "…"
@@ -210,6 +402,19 @@ class ApiTests(unittest.TestCase):
         self.assertNotIn("[9]", response.json["answer"])
         self.assertIn("[1]", response.json["answer"])
 
+    def test_chat_repairs_useful_answer_without_citations(self):
+        passage = {"passage_id": "01-00001_p0001", "entry_id": "01-00001", "nazwa": "Warszawa",
+                   "tom": "01", "strona": 1, "text": "Warszawa leży nad Wisłą.", "start_offset": 0, "end_offset": 25}
+        with patch.object(web.Meili, "search", return_value={"hits": [passage]}), \
+             patch.object(web.Chat, "answer", side_effect=["Warszawa leży nad Wisłą.",
+                                                          "Warszawa leży nad Wisłą [1]."]) as answer:
+            response = self.client.post("/api/v1/chat", json={"question": "Gdzie leży Warszawa?"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(answer.call_count, 2)
+        self.assertEqual(response.json["answer"], "Warszawa leży nad Wisłą [1].")
+        self.assertEqual(response.json["sources"][0]["entry_id"], passage["entry_id"])
+        self.assertEqual(answer.call_args.args[0][-2]["role"], "assistant")
+
     def test_chat_stream_emits_deltas_and_verified_answer(self):
         passage = {"passage_id": "01-00001_p0001", "entry_id": "01-00001", "nazwa": "Warszawa",
                    "tom": "01", "strona": 1, "text": "Warszawa leży nad Wisłą.", "start_offset": 0, "end_offset": 25}
@@ -222,6 +427,20 @@ class ApiTests(unittest.TestCase):
         self.assertIn("event: delta", body)
         self.assertIn("event: answer", body)
         self.assertIn("Wisłą [1].", body)
+
+    def test_chat_stream_repairs_uncited_final_answer(self):
+        passage = {"passage_id": "01-00001_p0001", "entry_id": "01-00001", "nazwa": "Warszawa",
+                   "tom": "01", "strona": 1, "text": "Warszawa leży nad Wisłą.", "start_offset": 0, "end_offset": 25}
+        with patch.object(web.Meili, "search", return_value={"hits": [passage]}), \
+             patch.object(web.Chat, "stream", return_value=iter(["Warszawa leży nad Wisłą."])), \
+             patch.object(web.Chat, "answer", return_value="Warszawa leży nad Wisłą [1].") as repair:
+            response = self.client.post("/api/v1/chat", json={"question": "Gdzie leży Warszawa?"},
+                                        headers={"Accept": "text/event-stream"})
+            body = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(repair.call_count, 1)
+        self.assertIn('"answer": "Warszawa leży nad Wisłą [1]."', body)
+        self.assertNotIn("weryfikowalnymi odsyłaczami", body)
 
     def test_chat_uses_openai_when_local_model_fails(self):
         passage = {"passage_id": "01-00001_p0001", "entry_id": "01-00001", "nazwa": "Warszawa",
@@ -251,6 +470,64 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(response.json["provider"], "local")
         self.assertTrue(all("vector" not in call.args[1] for call in search.call_args_list))
 
+    def test_chat_semantic_retrieval_for_natural_language_mining_question(self):
+        question = "Co wiadomo o wydobywaniu surowców?"
+        relevant = {"passage_id": "01-00001_p0001", "entry_id": "01-00001", "nazwa": "Borysław",
+                    "tom": "01", "strona": 332, "text": "W Borysławiu wydobywano ropę naftową.",
+                    "start_offset": 0, "end_offset": 38}
+        unrelated = {**relevant, "passage_id": "02-00001_p0001", "entry_id": "02-00001",
+                     "nazwa": "Gronowo", "text": "Wieś w powiecie."}
+        config = {"entries_index": "entries", "passages_index": "passages", "vectors": True,
+                  "source_dir": "/tmp", "lookup_db": "/tmp/lookup.sqlite"}
+
+        def search_result(index, payload):
+            if index == "entries":
+                return {"hits": []}
+            ratio = payload.get("hybrid", {}).get("semanticRatio")
+            return {"hits": [relevant if ratio == 1.0 else unrelated]}
+
+        with patch.object(web, "manifest", return_value=config), \
+             patch.object(web.Embeddings, "embed", return_value=[[0.1, 0.2]]), \
+             patch.object(web.Meili, "search", side_effect=search_result) as search, \
+             patch.object(web.Chat, "answer", return_value="W Borysławiu wydobywano ropę [1]."):
+            response = self.client.post("/api/v1/chat", json={"question": question})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(search.call_args_list[0].args[1]["hybrid"]["semanticRatio"], 1.0)
+        self.assertEqual(response.json["sources"][0]["nazwa"], "Borysław")
+
+    def test_repeated_question_does_not_reuse_sources_from_failed_answer(self):
+        question = "Co wiadomo o wydobywaniu surowców?"
+        relevant = {"passage_id": "01-00001_p0001", "entry_id": "01-00001", "nazwa": "Borysław",
+                    "tom": "01", "strona": 332, "text": "Wydobywano ropę naftową.",
+                    "start_offset": 0, "end_offset": 25}
+        history = [{"question": question,
+                    "answer": "W wynikach wyszukiwania nie ma informacji o wydobywaniu surowców [1].",
+                    "source_ids": ["02-00001_p0001"], "source_names": ["Gronowo"]}]
+        with patch.object(web, "historical_passage") as historical, \
+             patch.object(web.Meili, "search", return_value={"hits": [relevant]}) as search, \
+             patch.object(web.Chat, "answer", side_effect=["TAK", "W Borysławiu wydobywano ropę [1]."]):
+            response = self.client.post("/api/v1/chat", json={"question": question, "history": history})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["sources"][0]["nazwa"], "Borysław")
+        historical.assert_not_called()
+        self.assertEqual(search.call_args_list[0].args[1]["q"], question)
+
+    def test_chat_does_not_list_unrelated_sources_for_insufficient_answer(self):
+        source = {"entry_id": "02-00001", "nazwa": "Gronowo", "tom": "02", "strona": 852}
+        result = web.chat_response("W wynikach wyszukiwania nie ma informacji o tym [1][2].",
+                                   [source, source])
+        self.assertEqual(result["sources"], [])
+        self.assertNotIn("[1]", result["answer"])
+        self.assertNotIn("[2]", result["answer"])
+        qualified_source = {**source, "nazwa": "Borysław"}
+        qualified = web.chat_response("Nie ma informacji o skali, ale w Borysławiu wydobywano ropę [1].",
+                                      [qualified_source])
+        self.assertEqual(len(qualified["sources"]), 1)
+        self.assertIn("[1]", qualified["answer"])
+        two_sentences = web.chat_response("Nie ma informacji o skali. W Borysławiu wydobywano ropę [1].",
+                                          [qualified_source])
+        self.assertEqual(len(two_sentences["sources"]), 1)
+
     def test_chat_stream_replaces_partial_local_answer_after_failure(self):
         passage = {"passage_id": "01-00001_p0001", "entry_id": "01-00001", "nazwa": "Warszawa",
                    "tom": "01", "strona": 1, "text": "Warszawa leży nad Wisłą.", "start_offset": 0, "end_offset": 25}
@@ -270,6 +547,44 @@ class ApiTests(unittest.TestCase):
         self.assertIn('"provider": "openai"', body)
         self.assertIn('"answer": "Nad Wisłą [1]."', body)
         self.assertIn("event: done", body)
+
+    def test_chat_stream_retries_locally_when_answer_hits_output_limit(self):
+        passage = {"passage_id": "01-00001_p0001", "entry_id": "01-00001", "nazwa": "Warszawa",
+                   "tom": "01", "strona": 1, "text": "Warszawa leży nad Wisłą.", "start_offset": 0, "end_offset": 25}
+
+        def streams(_messages, max_tokens=None):
+            if max_tokens is None:
+                def partial():
+                    yield "Urwana odpo"
+                    raise ServiceError("chat", message="output_limit")
+                return partial()
+            return iter(["Warszawa leży nad Wisłą [1]."])
+
+        with patch.dict("os.environ", {"CHAT_MAX_OUTPUT_TOKENS": "3000"}), \
+             patch.object(web.Meili, "search", return_value={"hits": [passage]}), \
+             patch.object(web.Chat, "stream", side_effect=streams) as stream, \
+             patch.object(web.OpenAIChat, "stream") as fallback:
+            response = self.client.post("/api/v1/chat", json={"question": "Gdzie leży Warszawa?"},
+                                        headers={"Accept": "text/event-stream"})
+            body = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("event: retry", body)
+        self.assertIn('"answer": "Warszawa leży nad Wisłą [1]."', body)
+        self.assertIn('"provider": "local"', body)
+        self.assertEqual(stream.call_args_list[1].kwargs["max_tokens"], 6000)
+        fallback.assert_not_called()
+
+    def test_chat_nonstream_retries_locally_when_answer_hits_output_limit(self):
+        passage = {"passage_id": "01-00001_p0001", "entry_id": "01-00001", "nazwa": "Warszawa",
+                   "tom": "01", "strona": 1, "text": "Warszawa leży nad Wisłą.", "start_offset": 0, "end_offset": 25}
+        with patch.dict("os.environ", {"CHAT_MAX_OUTPUT_TOKENS": "3000"}), \
+             patch.object(web.Meili, "search", return_value={"hits": [passage]}), \
+             patch.object(web.Chat, "answer", side_effect=[ServiceError("chat", message="output_limit"),
+                                                          "Warszawa leży nad Wisłą [1]."]) as answer:
+            response = self.client.post("/api/v1/chat", json={"question": "Gdzie leży Warszawa?"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["answer"], "Warszawa leży nad Wisłą [1].")
+        self.assertEqual(answer.call_args_list[1].kwargs["max_tokens"], 6000)
 
     def test_chat_reports_missing_openai_model_access(self):
         passage = {"passage_id": "01-00001_p0001", "entry_id": "01-00001", "nazwa": "Warszawa",
@@ -336,6 +651,36 @@ class ApiTests(unittest.TestCase):
              patch("sgkp_services.requests.post", return_value=FakeResponse()):
             answer = OpenAIChat().answer([{"role": "user", "content": "Gdzie?"}])
         self.assertEqual(answer, "Nad Wisłą [1].")
+
+    def test_local_chat_reports_output_limit_instead_of_returning_partial_text(self):
+        class FakeResponse:
+            status_code = 200
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                pass
+
+            def json(self):
+                return {"choices": [{"message": {"content": "Urwana odpo"}, "finish_reason": "length"}]}
+
+            def iter_lines(self, decode_unicode=False):
+                return iter([
+                    'data: {"choices":[{"delta":{"content":"Urwana odpo"},"finish_reason":null}]}',
+                    'data: {"choices":[{"delta":{},"finish_reason":"length"}]}',
+                    'data: [DONE]',
+                ])
+
+        with patch.dict("os.environ", {"AI_TEST_KEY": "test-key", "CHAT_MAX_OUTPUT_TOKENS": "3000"}), \
+             patch("sgkp_services.requests.post", return_value=FakeResponse()) as post:
+            with self.assertRaises(ServiceError) as streamed:
+                list(Chat().stream([{"role": "user", "content": "Gdzie?"}]))
+            self.assertEqual(streamed.exception.message, "output_limit")
+            with self.assertRaises(ServiceError) as plain:
+                Chat().answer([{"role": "user", "content": "Gdzie?"}])
+            self.assertEqual(plain.exception.message, "output_limit")
+        self.assertEqual(post.call_args.kwargs["json"]["max_tokens"], 3000)
 
     def test_scan_parts_of_volume_xv(self):
         self.assertIn("XV_cz.1", scan_url("15", 1))

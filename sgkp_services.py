@@ -144,13 +144,15 @@ class Embeddings:
 class Chat:
     def __init__(self):
         self.url = os.getenv("CHAT_ENDPOINT", "https://ai-test.ihpan.edu.pl/v1/chat/completions")
-        self.model = os.getenv("CHAT_MODEL", "qwen3.8-flash-next-gguf")
+        self.model = os.getenv("CHAT_MODEL", "qwen3.8-flash-next-fp8")
         self.key = os.getenv("AI_TEST_KEY")
         self.timeout = (10, float(os.getenv("CHAT_READ_TIMEOUT", "45")))
+        self.max_output_tokens = int(os.getenv("CHAT_MAX_OUTPUT_TOKENS", "3000"))
 
-    def answer(self, messages: list[dict], max_tokens: int = 800) -> str:
+    def answer(self, messages: list[dict], max_tokens: int | None = None) -> str:
         if not self.key:
             raise ServiceError("chat", message="missing AI_TEST_KEY")
+        max_tokens = max_tokens if max_tokens is not None else self.max_output_tokens
         try:
             response = requests.post(self.url, json={"model": self.model, "messages": messages, "max_tokens": max_tokens,
                 "temperature": 0.1, "stream": False, "chat_template_kwargs": {"enable_thinking": False}},
@@ -160,16 +162,20 @@ class Chat:
         if response.status_code >= 400:
             raise ServiceError("chat", response.status_code, "request_failed")
         try:
-            content = response.json()["choices"][0]["message"]["content"]
+            choice = response.json()["choices"][0]
+            content = choice["message"]["content"]
         except (KeyError, IndexError, TypeError, ValueError) as exc:
             raise ServiceError("chat", message="invalid_response") from exc
+        if choice.get("finish_reason") == "length":
+            raise ServiceError("chat", message="output_limit")
         if not isinstance(content, str) or not content.strip():
             raise ServiceError("chat", message="empty_answer")
         return content
 
-    def stream(self, messages: list[dict], max_tokens: int = 800):
+    def stream(self, messages: list[dict], max_tokens: int | None = None):
         if not self.key:
             raise ServiceError("chat", message="missing AI_TEST_KEY")
+        max_tokens = max_tokens if max_tokens is not None else self.max_output_tokens
         try:
             response = requests.post(self.url, json={"model": self.model, "messages": messages,
                 "max_tokens": max_tokens, "temperature": 0.1, "stream": True,
@@ -182,7 +188,7 @@ class Chat:
             raise ServiceError("chat", response.status_code, "request_failed")
 
         def chunks():
-            completed = False
+            completed = hit_limit = False
             try:
                 with response:
                     for line in response.iter_lines(decode_unicode=True):
@@ -193,15 +199,20 @@ class Chat:
                             completed = True
                             break
                         try:
-                            part = json.loads(data)["choices"][0]["delta"].get("content")
+                            choice = json.loads(data)["choices"][0]
+                            part = choice["delta"].get("content")
                         except (ValueError, KeyError, IndexError, TypeError) as exc:
                             raise ServiceError("chat", message="invalid_stream") from exc
+                        if choice.get("finish_reason") == "length":
+                            hit_limit = True
                         if part:
                             yield part
             except requests.RequestException as exc:
                 raise ServiceError("chat", message=type(exc).__name__) from exc
             if not completed:
                 raise ServiceError("chat", message="incomplete_stream")
+            if hit_limit:
+                raise ServiceError("chat", message="output_limit")
 
         return chunks()
 
@@ -216,6 +227,7 @@ class OpenAIChat:
         self.reasoning_effort = configured_effort.strip() if configured_effort is not None else (
             "low" if self.model.startswith("gpt-6-") else "")
         self.key = os.getenv("OPENAI_API_KEY")
+        self.max_output_tokens = int(os.getenv("OPENAI_CHAT_MAX_OUTPUT_TOKENS", "3000"))
 
     def request(self, messages: list[dict], max_tokens: int, *, stream: bool):
         if not self.key:
@@ -239,7 +251,8 @@ class OpenAIChat:
             raise ServiceError("openai", response.status_code, error_code or "request_failed")
         return response
 
-    def answer(self, messages: list[dict], max_tokens: int = 1200) -> str:
+    def answer(self, messages: list[dict], max_tokens: int | None = None) -> str:
+        max_tokens = max_tokens if max_tokens is not None else self.max_output_tokens
         with self.request(messages, max_tokens, stream=False) as response:
             try:
                 data = response.json()
@@ -254,7 +267,8 @@ class OpenAIChat:
             raise ServiceError("openai", message="empty_answer")
         return text
 
-    def stream(self, messages: list[dict], max_tokens: int = 1200):
+    def stream(self, messages: list[dict], max_tokens: int | None = None):
+        max_tokens = max_tokens if max_tokens is not None else self.max_output_tokens
         response = self.request(messages, max_tokens, stream=True)
 
         def chunks():
