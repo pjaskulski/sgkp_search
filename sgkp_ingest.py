@@ -98,8 +98,8 @@ def ingest(input_dir: Path, output_dir: Path, suffix: str, with_vectors: bool, e
     if not meili.key:
         raise ValueError("Brak MEILI_API_KEY lub API_MEILISEARCH_ADMIN; raport walidacji jest gotowy, import nie został rozpoczęty")
     embedding = Embeddings() if with_vectors else None
-    if with_vectors and not embedding.key:
-        raise ValueError("Brak AI_TEST_KEY")
+    if with_vectors and not embedding.configured:
+        raise ValueError("Brak AI_TEST_KEY i API_JINA_KEY")
     cache = EmbeddingCache(output_dir / "embeddings.sqlite", embedding.model) if embedding else None
     entries_index = f"sgkp_entries_{suffix}"
     passages_index = f"sgkp_passages_{suffix}"

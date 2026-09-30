@@ -27,7 +27,7 @@ Uruchomienie aplikacji:
 venv/bin/python app.py
 ```
 
+
 ## Opis 
 
 Interfejs ma dwie zakładki: **Wyszukiwanie** z wynikami i **Konwersacja** z odpowiedziami opartymi na cytowanych hasłach. Opis aplikacji i wskazówki znajdują się w oknie **Pomoc** w nagłówku. W obu widokach dostępny jest ten sam zestaw filtrów. Po wybraniu „Tylko miejscowości” odblokowują się pola: „Tylko Królestwo Polskie”, typ miejscowości, gubernia i gmina. Gminę wybiera się z listy po wpisaniu fragmentu nazwy. 
-

@@ -354,74 +354,107 @@ async function openEntry(id, start, end) {
   } catch (error) { window.alert(error.message); }
 }
 async function askChat(question, filters, history, answerNode, sourcesNode, statusNode, signal) {
-  const response = await fetch("api/v1/chat", {
-    method: "POST",
-    headers: {"Content-Type": "application/json", "Accept": "text/event-stream"},
-    body: JSON.stringify({question, filters, history}), signal
-  });
-  if (!response.ok) {
-    let data = {};
-    try { data = await response.json(); } catch {}
-    throw new Error(data.error || "Usługa konwersacji jest niedostępna");
-  }
-  if (!response.body) throw new Error("Brak strumienia odpowiedzi");
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "", complete = false, provider = "local", model = "", finalAnswer = null;
-  while (true) {
-    const {value, done} = await reader.read();
-    buffer += decoder.decode(value || new Uint8Array(), {stream: !done}).replace(/\r\n/g, "\n");
-    let boundary;
-    while ((boundary = buffer.indexOf("\n\n")) >= 0) {
-      const event = buffer.slice(0, boundary);
-      buffer = buffer.slice(boundary + 2);
-      const type = event.match(/^event: (.+)$/m)?.[1];
-      const raw = event.match(/^data: (.+)$/m)?.[1];
-      if (!raw) continue;
-      const data = JSON.parse(raw);
-      if (type === "delta") answerNode.append(document.createTextNode(data.text));
-      else if (type === "retry") {
-        setText(answerNode, "");
-        answerNode.classList.remove("rendered");
-        setText(statusNode, "Odpowiedź przekroczyła początkowy limit. Generuję ją ponownie…");
-      }
-      else if (type === "fallback") {
-        setText(answerNode, "");
-        answerNode.classList.remove("rendered");
-        sourcesNode.replaceChildren();
-        setText(statusNode, "Model lokalny jest niedostępny. Korzystam z OpenAI…");
-      }
-      else if (type === "error") throw new Error(data.error || "Przerwano odpowiedź");
-      else if (type === "answer") {
-        complete = true;
-        finalAnswer = data;
-        provider = data.provider || "local";
-        model = data.model || "";
-        renderAnswerMarkdown(answerNode, data.answer);
-        sourcesNode.replaceChildren();
-        for (const source of data.sources || []) {
-          const item = element("li");
-          const location = [source.tom ? "tom " + source.tom : "", source.strona ? "s. " + source.strona : ""].filter(Boolean).join(", ");
-          const button = element("button", "[" + source.citation + "] " + source.nazwa + (location ? " · " + location : ""));
-          button.type = "button";
-          button.addEventListener("click", () => openEntry(source.entry_id, source.start_offset, source.end_offset));
-          item.append(button);
-          if (source.url_skanu) item.append(externalLink("Skan ↗", source.url_skanu));
-          sourcesNode.append(item);
+  const phases = [
+    "Analizuję pytanie i kontekst rozmowy…",
+    "Przeszukuję hasła i fragmenty źródłowe…",
+    "Dobieram źródła odnoszące się do pytania…",
+    "Przekazuję wybrane fragmenty modelowi do opracowania odpowiedzi…",
+  ];
+  let phase = 0, gotFirstDelta = false, retrying = false;
+  setText(statusNode, phases[0]);
+  statusNode.classList.add("is-working");
+  const progressTimer = setInterval(() => {
+    if (phase < phases.length - 1) setText(statusNode, phases[++phase]);
+    else setText(statusNode, "Model analizuje źródła. Dłuższa odpowiedź może wymagać chwili…");
+  }, 4500);
+  try {
+    const response = await fetch("api/v1/chat", {
+      method: "POST",
+      headers: {"Content-Type": "application/json", "Accept": "text/event-stream"},
+      body: JSON.stringify({question, filters, history}), signal
+    });
+    if (!response.ok) {
+      let data = {};
+      try { data = await response.json(); } catch {}
+      throw new Error(data.error || "Usługa konwersacji jest niedostępna");
+    }
+    if (!response.body) throw new Error("Brak strumienia odpowiedzi");
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "", complete = false, provider = "local", model = "", finalAnswer = null;
+    while (true) {
+      const {value, done} = await reader.read();
+      buffer += decoder.decode(value || new Uint8Array(), {stream: !done}).replace(/\r\n/g, "\n");
+      let boundary;
+      while ((boundary = buffer.indexOf("\n\n")) >= 0) {
+        const event = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+        const type = event.match(/^event: (.+)$/m)?.[1];
+        const raw = event.match(/^data: (.+)$/m)?.[1];
+        if (!raw) continue;
+        const data = JSON.parse(raw);
+        if (type === "delta") {
+          if (!gotFirstDelta) {
+            clearInterval(progressTimer);
+            setText(statusNode, provider === "openai" ? "OpenAI generuje odpowiedź…"
+              : retrying ? "Ponowiona próba generuje odpowiedź…" : "Model opracowuje odpowiedź na podstawie źródeł…");
+            gotFirstDelta = true;
+            retrying = false;
+          }
+          answerNode.append(document.createTextNode(data.text));
+        }
+        else if (type === "retry") {
+          setText(answerNode, "");
+          answerNode.classList.remove("rendered");
+          setText(statusNode, "Początkowy limit tokenów został osiągnięty. Ponawiam z większym limitem…");
+          gotFirstDelta = false;
+          retrying = true;
+        }
+        else if (type === "fallback") {
+          setText(answerNode, "");
+          answerNode.classList.remove("rendered");
+          sourcesNode.replaceChildren();
+          provider = "openai";
+          gotFirstDelta = false;
+          setText(statusNode, "Model lokalny nie ukończył odpowiedzi. Przełączam na OpenAI…");
+        }
+        else if (type === "error") throw new Error(data.error || "Przerwano odpowiedź");
+        else if (type === "answer") {
+          complete = true;
+          finalAnswer = data;
+          provider = data.provider || "local";
+          model = data.model || "";
+          renderAnswerMarkdown(answerNode, data.answer);
+          sourcesNode.replaceChildren();
+          for (const source of data.sources || []) {
+            const item = element("li");
+            const location = [source.tom ? "tom " + source.tom : "", source.strona ? "s. " + source.strona : ""].filter(Boolean).join(", ");
+            const button = element("button", "[" + source.citation + "] " + source.nazwa + (location ? " · " + location : ""));
+            button.type = "button";
+            button.addEventListener("click", () => openEntry(source.entry_id, source.start_offset, source.end_offset));
+            item.append(button);
+            if (source.url_skanu) item.append(externalLink("Skan ↗", source.url_skanu));
+            sourcesNode.append(item);
+          }
         }
       }
+      if (done) break;
     }
-    if (done) break;
+    if (!complete) throw new Error("Odpowiedź została przerwana");
+    return {...finalAnswer, provider, model};
+  } finally {
+    clearInterval(progressTimer);
   }
-  if (!complete) throw new Error("Odpowiedź została przerwana");
-  return {...finalAnswer, provider, model};
 }
 function makeTurn(question) {
   const turn = element("article", undefined, "turn");
   turn.append(element("div", question, "question-bubble"));
   const card = element("div", undefined, "answer-card");
   card.append(element("h2", "Odpowiedź"));
-  const status = element("p", "Szukam źródeł i przygotowuję odpowiedź…", "answer-status");
+  const status = element("p", "Analizuję pytanie i kontekst rozmowy…", "answer-status is-working");
+  status.setAttribute("role", "status");
+  status.setAttribute("aria-live", "polite");
+  status.setAttribute("aria-atomic", "true");
   const answer = element("div", undefined, "answer-text");
   const heading = element("p", "Źródła", "source-heading");
   heading.hidden = true;
@@ -505,11 +538,13 @@ async function submitChat(event) {
     setText(nodes.status, result.provider === "openai"
       ? "Odpowiedź przygotowana przez OpenAI (" + result.model + ") po niedostępności modelu lokalnego."
       : "");
+    nodes.status.classList.remove("is-working");
     nodes.heading.hidden = !nodes.sources.children.length;
     $("question").value = "";
   } catch (error) {
     if (generation !== state.chatGeneration) return;
     setText(nodes.status, error.message);
+    nodes.status.classList.remove("is-working");
     nodes.status.classList.add("error");
   } finally {
     if (generation === state.chatGeneration) {

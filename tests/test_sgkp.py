@@ -84,9 +84,54 @@ class ApiTests(unittest.TestCase):
             "source_dir": "/tmp", "lookup_db": "/tmp/lookup.sqlite",
         })
         self.manifest_patch.start()
+        self.subjects_patch = patch.object(web, "model_named_subjects",
+                                           side_effect=web.names_in_question)
+        self.subjects_patch.start()
+        self.metadata_plan_patch = patch.object(web, "model_metadata_searches", return_value=[])
+        self.metadata_plan_patch.start()
+        self.selection_patch = patch.object(
+            web, "select_relevant_passages",
+            side_effect=lambda _question, candidates, _history, limit=web.CHAT_SOURCE_LIMIT,
+                               force=False, per_batch_limit=web.CHAT_SELECTION_PER_BATCH,
+                               description_only=False:
+                               candidates[:limit])
+        self.selection_patch.start()
 
     def tearDown(self):
+        self.selection_patch.stop()
+        self.metadata_plan_patch.stop()
+        self.subjects_patch.stop()
         self.manifest_patch.stop()
+
+    def test_model_recognizes_lowercase_subject_and_omits_question_word(self):
+        self.subjects_patch.stop()
+        with patch.object(web.Chat, "answer",
+                          return_value='{"names":["warmbrunn"]}') as answer:
+            names = web.model_named_subjects("Czym wyróżniało się warmbrunn?")
+        self.assertEqual(names, ["warmbrunn"])
+        self.assertEqual(answer.call_count, 1)
+        with patch.object(web.Chat, "answer",
+                          return_value='{"names":["Nieobecna","warmbrunn"]}'):
+            self.assertEqual(web.model_named_subjects("Czym wyróżniało się warmbrunn?"),
+                             ["warmbrunn"])
+
+    def test_lowercase_name_is_used_for_named_retrieval(self):
+        self.subjects_patch.stop()
+        passage = {"passage_id": "13-00002_p0001", "entry_id": "13-00002",
+                   "nazwa": "Warmbrunn", "tom": "13", "strona": 5,
+                   "text": "Warmbrunn posiadał zakład kąpielowy."}
+
+        def search_result(_index, payload):
+            return {"hits": [passage] if payload["q"] == "warmbrunn" else []}
+
+        with patch.object(web.Meili, "search", side_effect=search_result) as search, \
+             patch.object(web.Chat, "answer", side_effect=[
+                 '{"names":["warmbrunn"]}', "Warmbrunn miał zakład kąpielowy [1]."]):
+            response = self.client.post("/api/v1/chat", json={
+                "question": "Czy w warmbrunn działał zakład kąpielowy?"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(search.call_args_list[0].args[1]["q"], "warmbrunn")
+        self.assertEqual(response.json["sources"][0]["entry_id"], "13-00002")
 
     def test_filter_escapes_value_and_rejects_expression(self):
         self.assertEqual(filter_expression({"powiat_ujednolicony": 'a" OR tom = "16'}),
@@ -168,6 +213,83 @@ class ApiTests(unittest.TestCase):
         self.assertIn("nazwa=Uzdrowisko 20", answer.call_args.args[0][1]["content"])
         self.assertNotIn("nazwa=Uzdrowisko 21", answer.call_args.args[0][1]["content"])
         self.assertEqual(response.json["sources"][0]["strona"], 42)
+
+    def test_generic_chat_selects_evidence_from_description_not_place_name(self):
+        self.selection_patch.stop()
+        misleading = {"passage_id": "14-05196_p0001", "entry_id": "14-05196",
+                      "nazwa": "Zielony Młyn", "tom": "14", "strona": 1,
+                      "text": "Zielony Młyn, pow. toszecko-gliwicki, ob. Kottischowitz."}
+        direct = {"passage_id": "01-00001_p0001", "entry_id": "01-00001",
+                  "nazwa": "Inna wieś", "tom": "01", "strona": 1,
+                  "text": "Inna wieś, pow. warszawski, posiada młyn wodny."}
+        self.assertEqual(web.descriptive_source_text(misleading),
+                         "pow. toszecko-gliwicki, ob. Kottischowitz.")
+        self.assertEqual(web.descriptive_source_text({**misleading,
+            "nazwa": "Huta-szklana", "text": "104.) Huta-szklana, pow. kielecki."}),
+            "pow. kielecki.")
+        self.assertIn("posiada młyn wodny", web.descriptive_source_text(direct))
+
+        with patch.object(web.Meili, "search", return_value={"hits": [misleading, direct]}), \
+             patch.object(web.Chat, "answer", side_effect=[
+                 json.dumps({"passage_ids": [direct["passage_id"]]}),
+                 "Młyn znajdował się w Innej wsi [1]."]) as answer:
+            response = self.client.post("/api/v1/chat", json={
+                "question": "Gdzie znajdowały się młyny?", "diagnostics": True})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["retrieved_passage_ids"], [direct["passage_id"]])
+        selection_prompt = answer.call_args_list[0].args[0][1]["content"]
+        self.assertNotIn("Zielony Młyn", selection_prompt)
+        self.assertIn("posiada młyn wodny", selection_prompt)
+        self.assertEqual(response.json["sources"][0]["entry_id"], direct["entry_id"])
+
+        with patch.object(web.Meili, "search", return_value={"hits": [misleading]}), \
+             patch.object(web.Chat, "answer", return_value='{"passage_ids": []}') as answer:
+            response = self.client.post("/api/v1/chat", json={
+                "question": "Gdzie znajdowały się młyny?"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["sources"], [])
+        self.assertIn("nie pozwalają odpowiedzieć", response.json["answer"])
+        self.assertEqual(answer.call_count, 1)
+
+    def test_metadata_search_supplements_semantic_passages_with_citable_entry(self):
+        self.metadata_plan_patch.stop()
+        entry = {"ID": "01-00033", "nazwa": "Abramówka", "tom": "01", "strona": 10,
+                 "text": "Abramówka, wś w pow. warszawskim. Wymieniona w źródłach.",
+                 "przemysłowe": ["huta szklana"], "jest_miejscowoscia": True}
+        semantic = {"passage_id": "02-00001_p0001", "entry_id": "02-00001",
+                    "nazwa": "Inna wieś", "tom": "02", "strona": 20,
+                    "text": "Inna wieś, działała tu huta szkła."}
+
+        def search_result(index, payload):
+            if index == "entries":
+                self.assertEqual(payload["attributesToSearchOn"], ["przemysłowe"])
+                self.assertEqual(payload["q"], "huta szklana")
+                return {"hits": [entry]}
+            return {"hits": [semantic]}
+
+        with patch.object(web, "model_metadata_searches",
+                          return_value=[("przemysłowe", "huta szklana")]), \
+             patch.object(web.Meili, "search", side_effect=search_result), \
+             patch.object(web.Chat, "answer",
+                          return_value="Huta działała w Innej wsi [1], a w metadanych Abramówki odnotowano hutę szklaną [2].") as answer:
+            response = self.client.post("/api/v1/chat", json={
+                "question": "Gdzie znajdowała się huta szkła?", "diagnostics": True})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["retrieved_passage_ids"],
+                         ["02-00001_p0001", "01-00033_p0001"])
+        self.assertEqual(response.json["sources"][1]["przemysłowe"], ["huta szklana"])
+        self.assertIn("Metadane hasła: obiekty i działalność przemysłowa: huta szklana",
+                      answer.call_args.args[0][1]["content"])
+
+    def test_metadata_search_plan_accepts_only_indexed_fields(self):
+        self.metadata_plan_patch.stop()
+        with patch.object(web.Chat, "answer", return_value=json.dumps({"searches": [
+            {"field": "młyny", "q": "młyn wodny"},
+            {"field": "text", "q": "młyn"},
+            {"field": "młyny", "q": "młyn wodny"},
+        ]})):
+            self.assertEqual(web.model_metadata_searches("Gdzie znajdowały się młyny?"),
+                             [("młyny", "młyn wodny")])
 
     def test_followup_uses_previously_cited_passages_as_current_evidence(self):
         busk = {"passage_id": "01-00001_p0001", "entry_id": "01-00001", "nazwa": "Busk",
@@ -275,6 +397,80 @@ class ApiTests(unittest.TestCase):
             result = web.historical_passage(config, "13-00001_p0001", "Które miało źródła siarczane?")
         self.assertNotEqual(result["passage_id"], "13-00001_p0001")
         self.assertIn("źródeł siarczanych", result["text"])
+
+    def test_followup_uses_model_to_find_semantically_related_later_passage(self):
+        self.selection_patch.stop()
+        entry_id = "01-04658"
+        entry = {"ID": entry_id, "nazwa": "Borysław",
+                 "text": ("Dawne dzieje miejscowości. " * 75) +
+                         "Kopanie studni nie jest bez niebezpieczeństwa. "
+                         "Z pokładów wydobywają się zabijające gazy."}
+        history = [{"question": "Co wydobywano w Borysławiu?",
+                    "answer": "Wydobywano naftę [1].",
+                    "source_ids": [entry_id + "_p0001"], "source_names": ["Borysław"]}]
+        chunks = web.passages({**entry, "tom": "01", "strona": 332})
+        relevant = next(chunk for chunk in chunks if "zabijające gazy" in chunk["text"])
+        with patch.object(web, "source_detail", return_value={"entry": entry, "tom": "01", "strona": 332}), \
+             patch.object(web.Meili, "search", return_value={"hits": []}) as search, \
+             patch.object(web.Chat, "answer", side_effect=[
+                 "TAK", json.dumps({"passage_ids": [relevant["passage_id"]]}),
+                 "Tak, wydobywające się gazy były niebezpieczne [1]."]) as answer:
+            response = self.client.post("/api/v1/chat", json={
+                "question": "Czy praca stwarzała tam zagrożenia dla robotników?",
+                "history": history, "diagnostics": True})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["retrieved_passage_ids"][0], relevant["passage_id"])
+        self.assertIn("zabijające gazy", answer.call_args.args[0][1]["content"])
+        self.assertEqual(response.json["sources"][0]["entry_id"], entry_id)
+        search.assert_not_called()
+
+    def test_named_entry_passages_take_priority_over_unrelated_results(self):
+        self.selection_patch.stop()
+        named = [
+            {"passage_id": "13-00002_p0001", "entry_id": "13-00002", "nazwa": "Warmbrunn",
+             "tom": "13", "strona": 5, "text": "Wiadomości historyczne."},
+            {"passage_id": "13-00002_p0002", "entry_id": "13-00002", "nazwa": "Warmbrunn",
+             "tom": "13", "strona": 5, "text": "Zakład przy ciepłych źródłach siarczanych."},
+        ]
+        unrelated = [{"passage_id": f"01-{i:05d}_p0001", "entry_id": f"01-{i:05d}",
+                      "nazwa": f"Inne hasło {i}", "tom": "01", "strona": 1,
+                      "text": "Inna informacja."} for i in range(15)]
+        misleading = {"passage_id": "01-99999_p0001", "entry_id": "01-99999",
+                      "nazwa": "Czym", "tom": "01", "strona": 1,
+                      "text": "Inne hasło przypadkowo zgodne ze słowem pytającym."}
+
+        def search_result(_index, payload):
+            return {"hits": {"Warmbrunn": named, "Czym": [misleading]}
+                    .get(payload["q"], unrelated)}
+
+        with patch.object(web.Meili, "search", side_effect=search_result), \
+             patch.object(web.Chat, "answer", side_effect=[
+                 json.dumps({"passage_ids": ["13-00002_p0002"]}),
+                 "Zakład korzystał z ciepłych źródeł siarczanych [1]."]) as answer:
+            response = self.client.post("/api/v1/chat", json={
+                "question": "Czym wyróżniał się zakład kąpielowy w Warmbrunn?",
+                "diagnostics": True})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["retrieved_passage_ids"][0], "13-00002_p0002")
+        self.assertLessEqual(len(response.json["retrieved_passage_ids"]),
+                             1 + web.CHAT_NAMED_BACKGROUND_LIMIT)
+        self.assertNotIn("Wiadomości historyczne", answer.call_args.args[0][1]["content"])
+        self.assertNotIn("przypadkowo zgodne", answer.call_args.args[0][1]["content"])
+        self.assertEqual(response.json["sources"][0]["entry_id"], "13-00002")
+
+    def test_model_passage_selection_cannot_invent_sources(self):
+        self.assertEqual(web.parse_passage_selection(
+            '{"passage_ids":["01-00001_p0001","99-99999_p0001"]}', {"01-00001_p0001"}),
+            ["01-00001_p0001"])
+
+    def test_passage_selection_falls_back_when_local_model_is_unavailable(self):
+        self.selection_patch.stop()
+        candidates = [
+            {"passage_id": f"01-00001_p{i:04d}", "entry_id": "01-00001",
+             "nazwa": "Hasło", "text": "Treść."} for i in (1, 2)]
+        with patch.object(web.Chat, "answer",
+                          side_effect=ServiceError("chat", message="timeout")):
+            self.assertIsNone(web.select_relevant_passages("Pytanie?", candidates, []))
 
     def test_model_classifies_every_question_with_history_before_search(self):
         history = [{"question": "Gdzie leżały Zawady?", "answer": "Wśród nich była osada karczemna.",
@@ -681,6 +877,66 @@ class ApiTests(unittest.TestCase):
                 Chat().answer([{"role": "user", "content": "Gdzie?"}])
             self.assertEqual(plain.exception.message, "output_limit")
         self.assertEqual(post.call_args.kwargs["json"]["max_tokens"], 3000)
+
+    def test_qwen_thinking_setting_applies_to_plain_and_streamed_requests(self):
+        class FakeResponse:
+            status_code = 200
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                pass
+
+            def json(self):
+                return {"choices": [{"message": {"content": "Odpowiedź"}}]}
+
+            def iter_lines(self, decode_unicode=False):
+                return iter([
+                    'data: {"choices":[{"delta":{"content":"Odpowiedź"}}]}',
+                    'data: [DONE]',
+                ])
+
+        with patch.dict("os.environ", {"AI_TEST_KEY": "test-key"}, clear=True):
+            chat = Chat()
+            self.assertFalse(chat.enable_thinking)
+            payload = chat.request_payload([], 100, stream=False)
+            self.assertNotIn("reasoning_effort", payload)
+            self.assertEqual(payload["temperature"], 0.7)
+
+        for setting, effort, override, expected in (
+            ("true", "medium", "", True), ("1", "low", "", True),
+            ("true", "xhigh", "0.35", True), ("true", "", "", True),
+            ("FALSE", "medium", "", False), ("0", "", "0.2", False),
+        ):
+            with self.subTest(setting=setting, effort=effort, override=override), \
+                 patch.dict("os.environ", {"AI_TEST_KEY": "test-key", "QWEN_ENABLE_THINKING": setting,
+                                            "QWEN_REASONING_EFFORT": effort,
+                                            **({"QWEN_TEMPERATURE": override} if override else {})}, clear=True), \
+                 patch("sgkp_services.requests.post", return_value=FakeResponse()) as post:
+                chat = Chat()
+                self.assertEqual(chat.answer([{"role": "user", "content": "Pytanie"}]), "Odpowiedź")
+                self.assertEqual(list(chat.stream([{"role": "user", "content": "Pytanie"}])), ["Odpowiedź"])
+                for call in post.call_args_list:
+                    payload = call.kwargs["json"]
+                    self.assertEqual(payload["chat_template_kwargs"]["enable_thinking"], expected)
+                    self.assertEqual(payload["temperature"], float(override) if override else
+                                     (1.0 if expected else 0.7))
+                    if expected and effort:
+                        self.assertEqual(payload["reasoning_effort"], effort)
+                    else:
+                        self.assertNotIn("reasoning_effort", payload)
+
+        with patch.dict("os.environ", {"QWEN_ENABLE_THINKING": "invalid"}):
+            with self.assertRaisesRegex(ValueError, "QWEN_ENABLE_THINKING"):
+                Chat()
+        with patch.dict("os.environ", {"QWEN_ENABLE_THINKING": "true",
+                                            "QWEN_REASONING_EFFORT": "high"}):
+            with self.assertRaisesRegex(ValueError, "QWEN_REASONING_EFFORT"):
+                Chat()
+        with patch.dict("os.environ", {"QWEN_TEMPERATURE": "nan"}):
+            with self.assertRaisesRegex(ValueError, "QWEN_TEMPERATURE"):
+                Chat()
 
     def test_scan_parts_of_volume_xv(self):
         self.assertIn("XV_cz.1", scan_url("15", 1))

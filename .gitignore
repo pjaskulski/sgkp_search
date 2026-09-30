@@ -215,3 +215,4 @@ SGKP_search_specyfikacja.md
 # Local SGKP source data; keep the directory in the repository.
 /json/*
 !/json/.gitkeep
+notatki.txt

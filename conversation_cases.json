@@ -1,0 +1,72 @@
+[
+  {
+    "case_id": "chat-okuniew-followup",
+    "turns": [
+      {
+        "question": "Czy Okuniew w powiecie warszawskim należał do Królestwa Polskiego?",
+        "required_source_groups": [["07-03365", "16-09160"]],
+        "required_terms": ["Tak", "Królestwa Polskiego"]
+      },
+      {
+        "question": "Czy znajdował się tam kościół?",
+        "required_source_groups": [["07-03365"]],
+        "required_terms": ["Tak", "kościół"]
+      }
+    ]
+  },
+  {
+    "case_id": "chat-zawady-followup",
+    "turns": [
+      {
+        "question": "Gdzie leżały Zawady w powiecie warszawskim?",
+        "required_source_groups": [["14-03861_a-001"], ["14-03861_a-002"]],
+        "required_terms": ["Wilanów", "Falenty"]
+      },
+      {
+        "question": "Czy wiadomo coś więcej o tej osadzie karczemnej?",
+        "required_source_groups": [["14-03861_a-002"]],
+        "required_terms": ["Falenty"]
+      }
+    ]
+  },
+  {
+    "case_id": "chat-warmbrunn-followup",
+    "turns": [
+      {
+        "question": "Czym wyróżniał się zakład kąpielowy w Warmbrunn?",
+        "required_source_groups": [["13-00002"]],
+        "required_terms": ["Warmbrunn"]
+      },
+      {
+        "question": "Czy były tam źródła siarczane?",
+        "required_source_groups": [["13-00002"]],
+        "required_terms": ["siarczan"]
+      }
+    ]
+  },
+  {
+    "case_id": "chat-boryslaw-followup",
+    "turns": [
+      {
+        "question": "Co wydobywano w Borysławiu w powiecie drohobyckim?",
+        "required_source_groups": [["01-04658", "15-04277"]],
+        "required_terms": ["rop"]
+      },
+      {
+        "question": "Czy wydobycie stwarzało tam zagrożenia dla górników?",
+        "required_source_groups": [["01-04658"]],
+        "required_terms": ["gaz"]
+      }
+    ]
+  },
+  {
+    "case_id": "chat-uzdrowiska-lista",
+    "turns": [
+      {
+        "question": "W jakich miejscowościach znajdowały się uzdrowiska?",
+        "required_source_groups": [["01-06332", "13-00002", "12-04269", "14-06969", "11-06788"]],
+        "required_terms": ["uzdrowisk"]
+      }
+    ]
+  }
+]

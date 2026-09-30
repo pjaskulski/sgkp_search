@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import math
 import os
 import re
 import shlex
@@ -118,17 +120,18 @@ class Embeddings:
         self.url = os.getenv("EMBEDDING_ENDPOINT", "https://ai-test.ihpan.edu.pl/engines/jina-embeddings-v3/embeddings")
         self.model = os.getenv("EMBEDDING_MODEL", "jina-embeddings-v3")
         self.key = os.getenv("AI_TEST_KEY")
+        self.jina_key = os.getenv("API_JINA_KEY")
+        self.jina_url = os.getenv("JINA_EMBEDDING_ENDPOINT", "https://api.jina.ai/v1/embeddings")
+        self.jina_model = os.getenv("JINA_EMBEDDING_MODEL", "jina-embeddings-v3")
+        self.jina_task = os.getenv("JINA_EMBEDDING_TASK", "text-matching")
         self.dimensions = int(os.getenv("EMBEDDING_DIMENSIONS", "1024"))
         self.session = requests.Session()
 
-    def embed(self, texts: list[str]) -> list[list[float]]:
-        if not self.key:
-            raise ServiceError("embedding", message="missing AI_TEST_KEY")
-        try:
-            response = self.session.post(self.url, json={"model": self.model, "input": texts},
-                headers={"Authorization": f"Bearer {self.key}"}, timeout=(10, 120))
-        except requests.RequestException as exc:
-            raise ServiceError("embedding", message=type(exc).__name__) from exc
+    @property
+    def configured(self) -> bool:
+        return bool(self.key or self.jina_key)
+
+    def _parse_vectors(self, response, texts: list[str]) -> list[list[float]]:
         if response.status_code >= 400:
             raise ServiceError("embedding", response.status_code, "request_failed")
         try:
@@ -140,55 +143,160 @@ class Embeddings:
             raise ServiceError("embedding", message="invalid_vector_count_or_dimensions")
         return vectors
 
+    def _embed_jina(self, texts: list[str]) -> list[list[float]]:
+        if not self.jina_key:
+            raise ServiceError("embedding", message="missing API_JINA_KEY")
+        try:
+            response = self.session.post(
+                self.jina_url,
+                json={"model": self.jina_model, "task": self.jina_task, "input": texts},
+                headers={"Authorization": f"Bearer {self.jina_key}"},
+                timeout=(10, 120),
+            )
+        except requests.RequestException as exc:
+            raise ServiceError("embedding", message=f"jina_{type(exc).__name__}") from exc
+        return self._parse_vectors(response, texts)
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        primary_error = None
+        if self.key:
+            try:
+                response = self.session.post(self.url, json={"model": self.model, "input": texts},
+                    headers={"Authorization": f"Bearer {self.key}"}, timeout=(10, 120))
+                return self._parse_vectors(response, texts)
+            except requests.RequestException as exc:
+                primary_error = ServiceError("embedding", message=type(exc).__name__)
+            except ServiceError as exc:
+                primary_error = exc
+        else:
+            primary_error = ServiceError("embedding", message="missing AI_TEST_KEY")
+
+        if not self.jina_key:
+            raise primary_error
+        try:
+            vectors = self._embed_jina(texts)
+        except ServiceError as fallback_error:
+            logging.getLogger(__name__).warning(
+                "Lokalna usługa embeddings jest niedostępna, a fallback Jina API nie powiódł się: %s",
+                fallback_error.message,
+            )
+            raise fallback_error from primary_error
+        logging.getLogger(__name__).warning(
+            "Lokalna usługa embeddings jest niedostępna (%s); użyto fallbacku Jina API.",
+            primary_error.message,
+        )
+        return vectors
+
 
 class Chat:
-    def __init__(self):
+    def __init__(self, *, preliminary: bool = False, stage: str = "wywołanie Qwena"):
         self.url = os.getenv("CHAT_ENDPOINT", "https://ai-test.ihpan.edu.pl/v1/chat/completions")
         self.model = os.getenv("CHAT_MODEL", "qwen3.8-flash-next-fp8")
         self.key = os.getenv("AI_TEST_KEY")
         self.timeout = (10, float(os.getenv("CHAT_READ_TIMEOUT", "45")))
         self.max_output_tokens = int(os.getenv("CHAT_MAX_OUTPUT_TOKENS", "3000"))
+        self.debug = os.getenv("CHAT_DEBUG", "false").strip().lower() in {"true", "1", "yes", "on"}
+        self.stage = stage
+        if preliminary:
+            self.enable_thinking = False
+            self.reasoning_effort = ""
+            self.temperature = 0.7
+        else:
+            thinking = os.getenv("QWEN_ENABLE_THINKING", "false").strip().lower()
+            if thinking not in {"true", "false", "1", "0", "yes", "no", "on", "off"}:
+                raise ValueError("QWEN_ENABLE_THINKING must be true or false")
+            self.enable_thinking = thinking in {"true", "1", "yes", "on"}
+            self.reasoning_effort = os.getenv("QWEN_REASONING_EFFORT", "").strip().lower()
+            if self.reasoning_effort not in {"", "low", "medium", "xhigh"}:
+                raise ValueError("QWEN_REASONING_EFFORT must be low, medium or xhigh")
+            self.temperature = float(os.getenv(
+                "QWEN_TEMPERATURE", "1.0" if self.enable_thinking else "0.7"))
+        if not math.isfinite(self.temperature) or not 0 <= self.temperature <= 2:
+            raise ValueError("QWEN_TEMPERATURE must be a finite number between 0 and 2")
+
+    def _log_call(self, mode: str, started: float, max_tokens: int,
+                  status: str, usage: dict | None = None) -> None:
+        if not self.debug:
+            return
+        usage = usage if isinstance(usage, dict) else {}
+        input_tokens = usage.get("prompt_tokens", usage.get("input_tokens", "n/d"))
+        output_tokens = usage.get("completion_tokens", usage.get("output_tokens", "n/d"))
+        details = usage.get("completion_tokens_details") or {}
+        reasoning_tokens = details.get("reasoning_tokens", "n/d") if isinstance(details, dict) else "n/d"
+        effort = (
+            (self.reasoning_effort or "domyślny serwera")
+            if self.enable_thinking else "pominięty (Thinking wyłączony)"
+        )
+        print(
+            f"[CHAT_DEBUG] etap={self.stage!r} model={self.model} tryb={mode} "
+            f"thinking={str(self.enable_thinking).lower()} reasoning_effort={effort} "
+            f"temperature={self.temperature} max_tokens={max_tokens} "
+            f"input_tokens={input_tokens} output_tokens={output_tokens} "
+            f"reasoning_tokens={reasoning_tokens} czas_s={time.monotonic() - started:.2f} "
+            f"status={status}",
+            flush=True,
+        )
+
+    def request_payload(self, messages: list[dict], max_tokens: int, *, stream: bool) -> dict:
+        payload = {"model": self.model, "messages": messages, "max_tokens": max_tokens,
+                   "temperature": self.temperature, "stream": stream,
+                   "chat_template_kwargs": {"enable_thinking": self.enable_thinking}}
+        if self.enable_thinking and self.reasoning_effort:
+            payload["reasoning_effort"] = self.reasoning_effort
+        if stream and self.debug:
+            payload["stream_options"] = {"include_usage": True}
+        return payload
 
     def answer(self, messages: list[dict], max_tokens: int | None = None) -> str:
         if not self.key:
             raise ServiceError("chat", message="missing AI_TEST_KEY")
         max_tokens = max_tokens if max_tokens is not None else self.max_output_tokens
+        started = time.monotonic()
         try:
-            response = requests.post(self.url, json={"model": self.model, "messages": messages, "max_tokens": max_tokens,
-                "temperature": 0.1, "stream": False, "chat_template_kwargs": {"enable_thinking": False}},
+            response = requests.post(self.url, json=self.request_payload(messages, max_tokens, stream=False),
                 headers={"Authorization": f"Bearer {self.key}"}, timeout=self.timeout)
         except requests.RequestException as exc:
+            self._log_call("zwykły", started, max_tokens, type(exc).__name__)
             raise ServiceError("chat", message=type(exc).__name__) from exc
         if response.status_code >= 400:
+            self._log_call("zwykły", started, max_tokens, f"http_{response.status_code}")
             raise ServiceError("chat", response.status_code, "request_failed")
         try:
-            choice = response.json()["choices"][0]
+            data = response.json()
+            usage = data.get("usage") if isinstance(data, dict) else None
+            choice = data["choices"][0]
             content = choice["message"]["content"]
         except (KeyError, IndexError, TypeError, ValueError) as exc:
+            self._log_call("zwykły", started, max_tokens, "invalid_response", locals().get("usage"))
             raise ServiceError("chat", message="invalid_response") from exc
         if choice.get("finish_reason") == "length":
+            self._log_call("zwykły", started, max_tokens, "output_limit", usage)
             raise ServiceError("chat", message="output_limit")
         if not isinstance(content, str) or not content.strip():
+            self._log_call("zwykły", started, max_tokens, "empty_answer", usage)
             raise ServiceError("chat", message="empty_answer")
+        self._log_call("zwykły", started, max_tokens, "ok", usage)
         return content
 
     def stream(self, messages: list[dict], max_tokens: int | None = None):
         if not self.key:
             raise ServiceError("chat", message="missing AI_TEST_KEY")
         max_tokens = max_tokens if max_tokens is not None else self.max_output_tokens
+        started = time.monotonic()
         try:
-            response = requests.post(self.url, json={"model": self.model, "messages": messages,
-                "max_tokens": max_tokens, "temperature": 0.1, "stream": True,
-                "chat_template_kwargs": {"enable_thinking": False}},
+            response = requests.post(self.url, json=self.request_payload(messages, max_tokens, stream=True),
                 headers={"Authorization": f"Bearer {self.key}"}, timeout=self.timeout, stream=True)
         except requests.RequestException as exc:
+            self._log_call("strumieniowy", started, max_tokens, type(exc).__name__)
             raise ServiceError("chat", message=type(exc).__name__) from exc
         if response.status_code >= 400:
             response.close()
+            self._log_call("strumieniowy", started, max_tokens, f"http_{response.status_code}")
             raise ServiceError("chat", response.status_code, "request_failed")
 
         def chunks():
             completed = hit_limit = False
+            usage = None
             try:
                 with response:
                     for line in response.iter_lines(decode_unicode=True):
@@ -199,7 +307,12 @@ class Chat:
                             completed = True
                             break
                         try:
-                            choice = json.loads(data)["choices"][0]
+                            event = json.loads(data)
+                            usage = event.get("usage") or usage
+                            choices = event.get("choices") or []
+                            if not choices:
+                                continue
+                            choice = choices[0]
                             part = choice["delta"].get("content")
                         except (ValueError, KeyError, IndexError, TypeError) as exc:
                             raise ServiceError("chat", message="invalid_stream") from exc
@@ -208,23 +321,30 @@ class Chat:
                         if part:
                             yield part
             except requests.RequestException as exc:
+                self._log_call("strumieniowy", started, max_tokens, type(exc).__name__, usage)
                 raise ServiceError("chat", message=type(exc).__name__) from exc
+            except ServiceError as exc:
+                self._log_call("strumieniowy", started, max_tokens, exc.message, usage)
+                raise
             if not completed:
+                self._log_call("strumieniowy", started, max_tokens, "incomplete_stream", usage)
                 raise ServiceError("chat", message="incomplete_stream")
             if hit_limit:
+                self._log_call("strumieniowy", started, max_tokens, "output_limit", usage)
                 raise ServiceError("chat", message="output_limit")
+            self._log_call("strumieniowy", started, max_tokens, "ok", usage)
 
         return chunks()
 
 
 class OpenAIChat:
-    """External fallback for grounded answers when the local chat service fails."""
+    """External fallback for grounded answers and helper calls when Qwen is unavailable."""
 
-    def __init__(self):
+    def __init__(self, *, preliminary: bool = False):
         self.url = "https://api.openai.com/v1/responses"
         self.model = os.getenv("OPENAI_CHAT_MODEL", "gpt-6-luna").strip() or "gpt-6-luna"
         configured_effort = os.getenv("OPENAI_REASONING_EFFORT")
-        self.reasoning_effort = configured_effort.strip() if configured_effort is not None else (
+        self.reasoning_effort = "" if preliminary else configured_effort.strip() if configured_effort is not None else (
             "low" if self.model.startswith("gpt-6-") else "")
         self.key = os.getenv("OPENAI_API_KEY")
         self.max_output_tokens = int(os.getenv("OPENAI_CHAT_MAX_OUTPUT_TOKENS", "3000"))

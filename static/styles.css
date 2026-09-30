@@ -120,6 +120,7 @@ select { appearance: auto; }
 #assistant-filter-slot .locality-options legend, #assistant-filter-slot .locality-options > .field-hint, #assistant-filter-slot .locality-options > .checkbox-option { grid-column: 1 / -1; }
 .chat-intro { margin: 0 0 30px; }
 .suggestions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px 16px; }
+.suggestion:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .suggestion { min-height: 54px; border: 1px solid #cbdbea; border-radius: 30px; background: white; color: var(--accent); padding: 11px 19px; text-align: center; font-size: 14px; }
 .suggestion:hover { border-color: var(--accent); background: #f1f6fc; }
 .conversation-actions { position: sticky; top: 0; z-index: 4; display: flex; justify-content: flex-end; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); background: var(--paper); }
@@ -131,6 +132,15 @@ select { appearance: auto; }
 .answer-card h2 { font-size: 20px; margin: 0 0 11px; }
 .answer-status { margin: 0 0 8px; color: #687f94; font-size: 13px; }
 .answer-status.error { color: #a12b2b; }
+.answer-status.is-working::before {
+  content: ""; display: inline-block; width: .8em; height: .8em; margin-right: .55em;
+  border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+  vertical-align: -.1em; animation: answer-status-spin .8s linear infinite;
+}
+@keyframes answer-status-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .answer-status.is-working::before { animation-duration: 2.4s; }
+}
 .answer-text { white-space: pre-wrap; overflow-wrap: anywhere; }
 .answer-text.rendered { white-space: normal; }
 .answer-text.rendered p { margin: 0 0 12px; }
