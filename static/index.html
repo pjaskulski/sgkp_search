@@ -18,6 +18,7 @@
       <nav class="primary-nav" role="tablist" aria-label="Widoki aplikacji" data-i18n-aria="viewsAria">
         <button id="tab-search" class="nav-tab" type="button" role="tab" aria-controls="search-view" aria-selected="true" data-i18n="searchTab">Wyszukiwanie</button>
         <button id="tab-assistant" class="nav-tab" type="button" role="tab" aria-controls="assistant-view" aria-selected="false" data-i18n="chatTab">Konwersacja</button>
+        <button id="tab-browse" class="nav-tab" type="button" role="tab" aria-controls="browse-view" aria-selected="false" data-i18n="browseTab">Przeglądanie</button>
       </nav>
       <div class="header-actions">
         <button id="theme-toggle" class="theme-button" type="button" aria-pressed="false" aria-label="Tryb dzienny. Włącz tryb nocny" title="Zmień motyw" data-i18n-title="themeToggleTitle">
@@ -75,8 +76,8 @@
             </div>
             <fieldset class="filter-block locality-choice">
               <legend class="field-label" data-i18n="entryScope">Zakres haseł</legend>
-              <label class="radio-option"><input type="radio" name="locality" value="all" checked><span data-i18n="allEntries">Wszystkie hasła</span></label>
-              <label class="radio-option"><input type="radio" name="locality" value="only"><span data-i18n="placesOnly">Tylko miejscowości</span></label>
+              <label class="radio-option"><input type="radio" name="locality" value="all"><span data-i18n="allEntries">Wszystkie hasła</span></label>
+              <label class="radio-option"><input type="radio" name="locality" value="only" checked><span data-i18n="placesOnly">Tylko miejscowości</span></label>
             </fieldset>
             <fieldset id="locality-options" class="locality-options" disabled>
               <legend data-i18n="localityFilters">Filtry miejscowości</legend>
@@ -120,8 +121,9 @@
 
     <section id="assistant-view" class="view" role="tabpanel" aria-labelledby="tab-assistant" hidden>
       <h1 class="sr-only" data-i18n="chatPageTitle">Konwersacja o treści SGKP</h1>
+      <p class="eyebrow assistant-filter-eyebrow" data-i18n="chatFilters">Filtry</p>
       <details id="assistant-filter-details" class="assistant-filters">
-        <summary><span data-i18n="sourceFilters">Filtry źródeł</span> <span id="assistant-filter-hint">Ogranicz zakres odpowiedzi</span></summary>
+        <summary><span id="assistant-filter-label" data-i18n="sourceFilters">Filtry źródeł</span> <span id="assistant-filter-hint">Ogranicz zakres odpowiedzi</span></summary>
         <div id="assistant-filter-slot"></div>
       </details>
       <div id="chat-intro" class="chat-intro">
@@ -134,6 +136,8 @@
           <button type="button" class="suggestion" data-i18n="exampleArchaeology">Jakie znaleziska archeologiczne znajdowały się w miejscowościach powiatu warszawskiego?</button>
           <button type="button" class="suggestion" data-i18n="exampleGlassworks">W których miejscowościach znajdowały się huty szkła?</button>
           <button type="button" class="suggestion" data-i18n="exampleOil">Co słownik mówi o wydobyciu ropy naftowej w Borysławiu?</button>
+          <button type="button" class="suggestion" data-i18n="exampleKononowicze">Co wiadomo o miejscowości Kononowicze w powiecie oszmiańskim?</button>
+          <button type="button" class="suggestion" data-i18n="exampleZyrardow">Ilu robotników pracowało w zakładach Żyrardowa i jakie wyroby tam wytwarzano?</button>
         </div>
       </div>
       <div id="conversation-actions" class="conversation-actions" hidden>
@@ -149,6 +153,39 @@
         </div>
         <p data-i18n="verifyAnswers">Odpowiedzi generowane automatycznie należy weryfikować w przywołanych hasłach.</p>
       </form>
+    </section>
+
+    <section id="browse-view" class="view" role="tabpanel" aria-labelledby="tab-browse" hidden>
+      <h1 class="sr-only" data-i18n="browsePageTitle">Przeglądanie haseł SGKP</h1>
+      <div class="browse-heading">
+        <div><h2 data-i18n="browseHeading">Przeglądanie haseł</h2></div>
+        <label class="browse-volume-label" for="browse-volume"><span data-i18n="browseVolume">Tom</span>
+          <select id="browse-volume" aria-label="Tom" data-i18n-aria="browseVolume">
+            <option value="01" selected>1</option><option value="02">2</option><option value="03">3</option><option value="04">4</option>
+            <option value="05">5</option><option value="06">6</option><option value="07">7</option><option value="08">8</option>
+            <option value="09">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option>
+            <option value="13">13</option><option value="14">14</option><option value="15">15 cz. 1</option><option value="16">16 cz. 2</option>
+          </select>
+        </label>
+      </div>
+      <div class="browse-results-toolbar">
+        <p id="browse-status" role="status" data-i18n="browseInitial">Wybierz tom, aby wyświetlić listę haseł.</p>
+        <nav id="browse-pagination-top" class="pagination browse-pagination-top" aria-label="Strony listy haseł" data-i18n-aria="browsePages" hidden>
+          <button id="browse-first-top" class="button button-outline" type="button" disabled data-i18n="firstPage">Początek</button>
+          <button id="browse-prev-top" class="button button-outline" type="button" disabled data-i18n="previous">← Poprzednia</button>
+          <span id="browse-page-label-top"></span>
+          <button id="browse-next-top" class="button button-outline" type="button" disabled data-i18n="next">Następna →</button>
+          <button id="browse-last-top" class="button button-outline" type="button" disabled data-i18n="lastPage">Koniec</button>
+        </nav>
+      </div>
+      <div id="browse-results" class="results"></div>
+      <nav id="browse-pagination" class="pagination" aria-label="Strony listy haseł" data-i18n-aria="browsePages" hidden>
+        <button id="browse-first" class="button button-outline" type="button" disabled data-i18n="firstPage">Początek</button>
+        <button id="browse-prev" class="button button-outline" type="button" disabled data-i18n="previous">← Poprzednia</button>
+        <span id="browse-page-label"></span>
+        <button id="browse-next" class="button button-outline" type="button" disabled data-i18n="next">Następna →</button>
+        <button id="browse-last" class="button button-outline" type="button" disabled data-i18n="lastPage">Koniec</button>
+      </nav>
     </section>
   </main>
 

@@ -10,8 +10,12 @@ const UI_COPY = {
   pl: {
     documentTitle: "SGKP — wyszukiwanie i konwersacja", brandName: "Słownik Geograficzny\nKrólestwa Polskiego",
     brandAria: "SGKP — przejdź do wyszukiwania", viewsAria: "Widoki aplikacji", languageAria: "Język interfejsu", themeToggleTitle: "Zmień motyw",
-    searchPageTitle: "Wyszukiwanie w SGKP", chatPageTitle: "Konwersacja o treści SGKP",
-    searchFiltersAria: "Filtry wyszukiwania", searchTab: "Wyszukiwanie", chatTab: "Konwersacja",
+    searchPageTitle: "Wyszukiwanie w SGKP", chatPageTitle: "Konwersacja o treści SGKP", browsePageTitle: "Przeglądanie haseł SGKP",
+    searchFiltersAria: "Filtry wyszukiwania", searchTab: "Wyszukiwanie", chatTab: "Konwersacja", browseTab: "Przeglądanie",
+    browseHeading: "Przeglądanie haseł", browseVolume: "Tom", browseAllVolumes: "Wybierz tom",
+    browseLoading: "Wczytuję hasła…", browseInitial: "Wybierz tom, aby wyświetlić listę haseł.", browseRange: "Hasła {start}–{end} z {total}", browseEmpty: "Brak haseł w tym tomie.", browsePages: "Strony listy haseł", firstPage: "Początek", lastPage: "Koniec",
+    collectiveKind: "Hasło zbiorcze", showSubentries: "Pokaż podhasła", hideSubentries: "Ukryj podhasła",
+    loadingSubentries: "Wczytuję podhasła…", noSubentries: "To hasło nie zawiera podhaseł.", subentriesTitle: "Podhasła",
     help: "Pomoc", searchLabel: "Szukaj w słowniku", queryPlaceholder: "Nazwa miejscowości, osoba lub słowa z hasła",
     searchButton: "Wyszukaj", searchMode: "Tryb wyszukiwania", textMode: "Pełnotekstowe", hybridMode: "Hybrydowe",
     semanticMode: "Semantyczne", semanticShare: "Udział semantyki", mobileShowFilters: "Pokaż filtry",
@@ -25,11 +29,12 @@ const UI_COPY = {
     catalog: "Katalog haseł", searchResults: "Wyniki wyszukiwania", startSearch: "Wpisz zapytanie, aby rozpocząć.",
     startByName: "Zacznij od nazwy lub tematu", enterQuery: "Wprowadź zapytanie w polu powyżej.",
     pagesLabel: "Strony wyników", previous: "← Poprzednia", next: "Następna →", sourceFilters: "Filtry źródeł",
-    limitAnswer: "Ogranicz zakres odpowiedzi", exampleQuestions: "Przykładowe pytania",
+    limitAnswer: "Ogranicz zakres odpowiedzi", chatFilters: "Filtry", exampleQuestions: "Przykładowe pytania",
     exampleSpas: "W jakich miejscowościach znajdowały się uzdrowiska?", exampleKingdom: "Czy Okuniew w powiecie warszawskim należał do Królestwa Polskiego?",
     exampleSettlements: "Jakie typy osad wymieniono w powiecie wileńskim?", exampleZawady: "Gdzie leżały Zawady w powiecie warszawskim?",
     exampleArchaeology: "Jakie znaleziska archeologiczne znajdowały się w miejscowościach powiatu warszawskiego?", exampleGlassworks: "W których miejscowościach znajdowały się huty szkła?",
-    exampleOil: "Co słownik mówi o wydobyciu ropy naftowej w Borysławiu?", downloadPdf: "Pobierz PDF",
+    exampleOil: "Co słownik mówi o wydobyciu ropy naftowej w Borysławiu?", exampleKononowicze: "Co wiadomo o miejscowości Kononowicze w powiecie oszmiańskim?",
+    exampleZyrardow: "Ilu robotników pracowało w zakładach Żyrardowa i jakie wyroby tam wytwarzano?", downloadPdf: "Pobierz PDF",
     clearConversation: "Wyczyść rozmowę", yourQuestion: "Twoje pytanie",
     questionPlaceholder: "Zapytaj o miejscowość, osobę lub zagadnienie opisane w słowniku…", ask: "Zapytaj",
     verifyAnswers: "Odpowiedzi generowane automatycznie należy weryfikować w przywołanych hasłach.",
@@ -44,7 +49,7 @@ const UI_COPY = {
     searching: "Wyszukiwanie…", resultsRange: "Wyniki {start}–{end} · około {total} trafień", noResults: "Brak wyników",
     notFoundTitle: "Nie znaleziono haseł", noResultsAdvice: "Zmień słowa zapytania albo ograniczenia w panelu filtrów.",
     searchFailedTitle: "Nie można wyświetlić wyników", serviceRetry: "Sprawdź połączenie z usługą i spróbuj ponownie.",
-    resultPage: "Strona {page}", volumePage: "Tom {volume} · s. {page}", districtPrefix: "Powiat {name}",
+    resultPage: "Strona {page}", volumePage: "Tom {volume} · s. {page}", volumePart1: "cz. 1", volumePart2: "cz. 2", districtPrefix: "Powiat {name}",
     volumeShort: "tom {volume}", pageShort: "s. {page}",
     collectiveItem: "Element hasła zbiorczego{number}", scanPage: "Skan strony ↗", filterLoadFailed: "Nie udało się wczytać list filtrów. Wyszukiwanie nadal jest dostępne.",
     communeMatches: "Znaleziono {count} nazw; na liście widać pierwsze 100.",
@@ -59,7 +64,7 @@ const UI_COPY = {
     openSourceScan: "Skan ↗", preparePdfFailed: "Nie udało się przygotować PDF", defaultPdfName: "sgkp-konwersacja.pdf",
     openaiAnswerNotice: "Odpowiedź przygotowana przez OpenAI ({model}) po niedostępności modelu lokalnego.",
     entryId: "ID: {id} · tom {volume}, s. {page}{number}", entryNumber: " · element nr {number}",
-    entryScanAria: "Otwórz skan strony", answerLabel: "Odpowiedź", filtersActive: "{count} aktywne",
+    entryScanAria: "Otwórz skan strony", answerLabel: "Odpowiedź", filtersActive: "Filtry źródeł: {count}",
     serviceUnavailable: "Usługa jest niedostępna", badServerResponse: "Nieprawidłowa odpowiedź serwera",
     conversationServiceUnavailable: "Usługa konwersacji jest niedostępna", noResponseStream: "Brak strumienia odpowiedzi",
     responseInterrupted: "Odpowiedź została przerwana", couldNotPreparePdf: "Nie udało się przygotować PDF",
@@ -68,8 +73,12 @@ const UI_COPY = {
   en: {
     documentTitle: "SGKP — Search and Conversation", brandName: "Geographical Dictionary\nof the Kingdom of Poland",
     brandAria: "SGKP — go to search", viewsAria: "Application views", languageAria: "Interface language", themeToggleTitle: "Change theme",
-    searchPageTitle: "Search SGKP", chatPageTitle: "Conversation about SGKP",
-    searchFiltersAria: "Search filters", searchTab: "Search", chatTab: "Conversation",
+    searchPageTitle: "Search SGKP", chatPageTitle: "Conversation about SGKP", browsePageTitle: "Browse SGKP entries",
+    searchFiltersAria: "Search filters", searchTab: "Search", chatTab: "Conversation", browseTab: "Browse entries",
+    browseHeading: "Browse entries", browseVolume: "Volume", browseAllVolumes: "Select a volume",
+    browseLoading: "Loading entries…", browseInitial: "Select a volume to browse its entries.", browseRange: "Entries {start}–{end} of {total}", browseEmpty: "No entries in this volume.", browsePages: "Entry list pages", firstPage: "First", lastPage: "Last",
+    collectiveKind: "Collective entry", showSubentries: "Show subentries", hideSubentries: "Hide subentries",
+    loadingSubentries: "Loading subentries…", noSubentries: "This entry has no subentries.", subentriesTitle: "Subentries",
     help: "Help", searchLabel: "Search the dictionary", queryPlaceholder: "Place name, person, or words from an entry",
     searchButton: "Search", searchMode: "Search mode", textMode: "Full-text", hybridMode: "Hybrid",
     semanticMode: "Semantic", semanticShare: "Semantic share", mobileShowFilters: "Show filters",
@@ -83,11 +92,12 @@ const UI_COPY = {
     catalog: "Entry catalogue", searchResults: "Search results", startSearch: "Enter a query to begin.",
     startByName: "Start with a name or subject", enterQuery: "Enter a query in the field above.",
     pagesLabel: "Search result pages", previous: "← Previous", next: "Next →", sourceFilters: "Source filters",
-    limitAnswer: "Narrow the answer scope", exampleQuestions: "Example questions",
+    limitAnswer: "Narrow the answer scope", chatFilters: "Filters", exampleQuestions: "Example questions",
     exampleSpas: "Which localities had spas?", exampleKingdom: "Did Okuniew in Warsaw County belong to the Kingdom of Poland?",
     exampleSettlements: "What types of settlements are listed in Vilnius County?", exampleZawady: "Where were the Zawady in Warsaw County located?",
     exampleArchaeology: "What archaeological finds were reported in localities in Warsaw County?", exampleGlassworks: "Which localities had glassworks?",
-    exampleOil: "What does the dictionary say about oil extraction in Borysław?", downloadPdf: "Download PDF",
+    exampleOil: "What does the dictionary say about oil extraction in Borysław?", exampleKononowicze: "What is known about the locality of Kononowicze in Oszmiana County?",
+    exampleZyrardow: "How many workers were employed in Żyrardów's factories, and what products were made there?", downloadPdf: "Download PDF",
     clearConversation: "Clear conversation", yourQuestion: "Your question",
     questionPlaceholder: "Ask about a place, person, or subject described in the dictionary…", ask: "Ask",
     verifyAnswers: "Automatically generated answers should be checked against the cited entries.",
@@ -102,7 +112,7 @@ const UI_COPY = {
     searching: "Searching…", resultsRange: "Results {start}–{end} · about {total} hits", noResults: "No results",
     notFoundTitle: "No entries found", noResultsAdvice: "Try different search terms or change the filters.",
     searchFailedTitle: "Search results are unavailable", serviceRetry: "Check the service connection and try again.",
-    resultPage: "Page {page}", volumePage: "Vol. {volume} · p. {page}", districtPrefix: "District {name}",
+    resultPage: "Page {page}", volumePage: "Vol. {volume} · p. {page}", volumePart1: "pt. 1", volumePart2: "pt. 2", districtPrefix: "District {name}",
     volumeShort: "vol. {volume}", pageShort: "p. {page}",
     collectiveItem: "Part of a collective entry{number}", scanPage: "Page scan ↗", filterLoadFailed: "Filter lists could not be loaded. Search is still available.",
     communeMatches: "Found {count} names; showing the first 100.",
@@ -117,7 +127,7 @@ const UI_COPY = {
     openSourceScan: "Scan ↗", preparePdfFailed: "Could not prepare the PDF", defaultPdfName: "sgkp-conversation.pdf",
     openaiAnswerNotice: "Answer generated by OpenAI ({model}) because the local model was unavailable.",
     entryId: "ID: {id} · vol. {volume}, p. {page}{number}", entryNumber: " · item {number}",
-    entryScanAria: "Open page scan", answerLabel: "Answer", filtersActive: "{count} active",
+    entryScanAria: "Open page scan", answerLabel: "Answer", filtersActive: "Source filters: {count}",
     serviceUnavailable: "The service is unavailable", badServerResponse: "Invalid server response",
     conversationServiceUnavailable: "The conversation service is unavailable", noResponseStream: "No response stream was received",
     responseInterrupted: "The response was interrupted", couldNotPreparePdf: "Could not prepare the PDF",
@@ -126,12 +136,20 @@ const UI_COPY = {
 };
 let currentLanguage = "pl";
 const state = { page: 1, hasNext: false, entry: null, highlight: null, request: 0, gminas: [], chatBusy: false,
-  chatController: null, chatGeneration: 0, chatHistory: [], exportTurns: [], searchData: null };
+  chatController: null, chatGeneration: 0, chatHistory: [], exportTurns: [], searchData: null,
+  browsePage: 1, browseHasNext: false, browseData: null, browseRequest: 0, showParentContext: true };
 
 function setText(node, value) { node.textContent = value == null ? "" : String(value); }
 function t(key, values = {}) {
   const template = UI_COPY[currentLanguage][key] ?? UI_COPY.pl[key] ?? key;
   return template.replace(/\{(\w+)\}/g, (_, name) => values[name] ?? "");
+}
+function displayVolume(value) {
+  const number = Number.parseInt(value, 10);
+  if (!Number.isFinite(number)) return value || "—";
+  if (number === 15) return `15 ${t("volumePart1")}`;
+  if (number === 16) return `16 ${t("volumePart2")}`;
+  return String(number);
 }
 function applyLanguage(language, persist = false) {
   currentLanguage = language === "en" ? "en" : "pl";
@@ -147,6 +165,11 @@ function applyLanguage(language, persist = false) {
   document.querySelectorAll("[data-i18n-placeholder]").forEach(node => node.placeholder = t(node.dataset.i18nPlaceholder));
   document.querySelectorAll("[data-i18n-aria]").forEach(node => node.setAttribute("aria-label", t(node.dataset.i18nAria)));
   document.querySelectorAll("[data-i18n-title]").forEach(node => node.title = t(node.dataset.i18nTitle));
+  for (const option of $("browse-volume").options) option.textContent = displayVolume(option.value);
+  const volumeFilter = $("tom");
+  const selectedVolume = volumeFilter.value;
+  for (const option of Array.from(volumeFilter.options).slice(1)) option.textContent = displayVolume(option.value);
+  volumeFilter.value = selectedVolume;
   document.querySelectorAll("[data-language]").forEach(button => {
     const active = button.dataset.language === currentLanguage;
     button.setAttribute("aria-pressed", String(active));
@@ -157,6 +180,7 @@ function applyLanguage(language, persist = false) {
   updateFilterToggleLabel();
   if (state.gminas.length) renderGminaChoices();
   if (state.searchData) renderSearchResults(state.searchData);
+  if (state.browseData) renderBrowseResults(state.browseData);
   if (state.entry) renderEntry();
   if (persist) {
     try { localStorage.setItem(LANGUAGE_STORAGE_KEY, currentLanguage); } catch { /* Keep current language for this page. */ }
@@ -247,6 +271,7 @@ function updateFilterToggleLabel() {
   const count = Object.keys(activeFilters()).length;
   const expanded = $("search-filter-slot").classList.contains("expanded");
   $("mobile-filter-toggle").firstChild.textContent = (expanded ? t("mobileHideFilters") : t("mobileShowFilters")) + (count ? " (" + count + ")" : "") + " ";
+  $("assistant-filter-label").hidden = count > 0;
   setText($("assistant-filter-hint"), count ? t("filtersActive", {count}) : t("limitAnswer"));
 }
 function updateLocalityUi(clear = false) {
@@ -264,19 +289,25 @@ function modeUi() {
   $("ratio-line").classList.toggle("visible", selectedMode() === "hybrid");
 }
 function viewFromHash() {
-  return ["#konwersacja", "#asystent"].includes(location.hash) ? "konwersacja" : "wyszukiwanie";
+  if (["#konwersacja", "#asystent"].includes(location.hash)) return "konwersacja";
+  if (["#przegladanie", "#browse"].includes(location.hash)) return "przegladanie";
+  return "wyszukiwanie";
 }
 function switchView(view, updateUrl = true) {
-  const assistant = view === "konwersacja" || view === "asystent";
-  $("search-view").hidden = assistant;
-  $("assistant-view").hidden = !assistant;
-  $("tab-search").setAttribute("aria-selected", String(!assistant));
-  $("tab-assistant").setAttribute("aria-selected", String(assistant));
-  (assistant ? $("assistant-filter-slot") : $("search-filter-slot")).append($("filter-panel"));
-  if (updateUrl) history.replaceState(null, "", location.pathname + location.search + "#" + (assistant ? "konwersacja" : "wyszukiwanie"));
+  const selected = view === "konwersacja" || view === "asystent" ? "konwersacja"
+    : view === "przegladanie" ? "przegladanie" : "wyszukiwanie";
+  $("search-view").hidden = selected !== "wyszukiwanie";
+  $("assistant-view").hidden = selected !== "konwersacja";
+  $("browse-view").hidden = selected !== "przegladanie";
+  $("tab-search").setAttribute("aria-selected", String(selected === "wyszukiwanie"));
+  $("tab-assistant").setAttribute("aria-selected", String(selected === "konwersacja"));
+  $("tab-browse").setAttribute("aria-selected", String(selected === "przegladanie"));
+  if (selected !== "przegladanie") $(selected === "konwersacja" ? "assistant-filter-slot" : "search-filter-slot").append($("filter-panel"));
+  if (updateUrl) history.replaceState(null, "", location.pathname + location.search + "#" + selected);
 }
 function queryParams(page) {
   const params = new URLSearchParams({ q: $("query").value.trim(), mode: selectedMode(), page: String(page) });
+  params.set("language", currentLanguage);
   if (selectedMode() === "hybrid") params.set("ratio", String(Number($("ratio").value) / 100));
   for (const [key, value] of Object.entries(activeFilters())) params.set(key, value);
   return params;
@@ -289,6 +320,11 @@ function makeEmpty(title, message) {
 }
 function snippetNode(hit) {
   const paragraph = element("p");
+  if (hit.snippet_is_markdown) {
+    paragraph.classList.add("browse-preview");
+    appendAnswerInline(paragraph, hit.snippet);
+    return paragraph;
+  }
   const chars = Array.from(hit.snippet);
   let cursor = 0;
   for (const range of hit.snippet_highlights || []) {
@@ -311,7 +347,7 @@ function resultCard(hit) {
   title.append(open);
   card.append(title);
   const meta = element("div", undefined, "result-meta");
-  meta.append(element("span", t("volumePage", {volume: hit.tom || "—", page: hit.strona || "—"})));
+  meta.append(element("span", t("volumePage", {volume: displayVolume(hit.tom), page: hit.strona || "—"})));
   if (hit.powiat_ujednolicony) meta.append(element("span", t("districtPrefix", {name: hit.powiat_ujednolicony})));
   if (hit.parent_id) meta.append(element("span", t("collectiveItem", {number: hit.nr ? " · " + hit.nr : ""})));
   if (hit.url_skanu) meta.append(externalLink(t("scanPage"), hit.url_skanu));
@@ -366,6 +402,129 @@ async function search(page = 1) {
     $("results").append(makeEmpty(t("searchFailedTitle"), t("serviceRetry")));
   }
 }
+function renderBrowseResults(data) {
+  state.browsePage = data.page;
+  state.browseHasNext = data.has_next;
+  const lastPage = Math.max(1, Math.ceil(data.estimated_total_hits / data.page_size));
+  for (const suffix of ["", "-top"]) {
+    $("browse-first" + suffix).disabled = data.page <= 1;
+    $("browse-prev" + suffix).disabled = data.page <= 1;
+    $("browse-next" + suffix).disabled = !data.has_next;
+    $("browse-last" + suffix).disabled = data.page >= lastPage;
+    setText($("browse-page-label" + suffix), t("resultPage", {page: data.page}));
+    $("browse-pagination" + suffix).hidden = !data.hits.length;
+  }
+  $("browse-results").replaceChildren();
+  if (data.hits.length) {
+    const start = (data.page - 1) * data.page_size + 1;
+    const end = start + data.hits.length - 1;
+    setText($("browse-status"), t("browseRange", {start, end, total: data.estimated_total_hits}));
+    for (const hit of data.hits) {
+      const card = resultCard({...hit, typ_punktu_osadniczego: [], snippet: hit.preview,
+        snippet_is_markdown: hit.preview_is_markdown});
+      if (hit.rodzaj === "zbiorcze") {
+        const kind = element("div", undefined, "result-meta");
+        kind.style.marginTop = "10px";
+        kind.append(element("span", t("collectiveKind"), "tag"));
+        const childrenPanel = element("div", undefined, "browse-subentries");
+        childrenPanel.id = "subentries-" + hit.ID;
+        childrenPanel.hidden = true;
+        const toggle = element("button", "▾", "button button-outline browse-subentries-toggle");
+        toggle.type = "button";
+        toggle.setAttribute("aria-label", t("showSubentries"));
+        toggle.title = t("showSubentries");
+        toggle.setAttribute("aria-expanded", "false");
+        toggle.setAttribute("aria-controls", childrenPanel.id);
+        toggle.addEventListener("click", async () => {
+          const expanded = toggle.getAttribute("aria-expanded") !== "true";
+          toggle.setAttribute("aria-expanded", String(expanded));
+          setText(toggle, expanded ? "▴" : "▾");
+          toggle.setAttribute("aria-label", t(expanded ? "hideSubentries" : "showSubentries"));
+          toggle.title = t(expanded ? "hideSubentries" : "showSubentries");
+          childrenPanel.hidden = !expanded;
+          if (!expanded || hit.subentriesLoaded) return;
+          childrenPanel.replaceChildren(element("p", t("loadingSubentries"), "field-hint"));
+          try {
+            const children = await api("api/v1/browse/" + encodeURIComponent(hit.ID) + "/children");
+            hit.subentries = children.hits || [];
+            hit.subentriesLoaded = true;
+            childrenPanel.replaceChildren();
+            if (!hit.subentries.length) {
+              childrenPanel.append(element("p", t("noSubentries"), "field-hint"));
+              return;
+            }
+            childrenPanel.append(element("h4", t("subentriesTitle")));
+            const list = element("ol");
+            for (const child of hit.subentries) {
+              const item = element("li");
+              const openChild = element("button", child.nazwa, "text-button browse-subentry-link");
+              openChild.type = "button";
+              openChild.addEventListener("click", () => openEntry(child.ID, undefined, undefined, false));
+              item.append(openChild);
+              const localityTypes = Array.isArray(child.typ_punktu_osadniczego)
+                ? child.typ_punktu_osadniczego : child.typ_punktu_osadniczego ? [child.typ_punktu_osadniczego] : [];
+              const types = localityTypes.length ? localityTypes
+                : Array.isArray(child.typ) ? child.typ : child.typ ? [child.typ] : [];
+              if (types.length) {
+                const typeList = element("div", undefined, "browse-subentry-types");
+                for (const value of types) typeList.append(element("span", typeof value === "string" ? value : JSON.stringify(value), "tag"));
+                item.append(typeList);
+              }
+              if (child.preview) {
+                const preview = element("p", undefined, "browse-subentry-preview");
+                if (child.preview_is_markdown) appendAnswerInline(preview, child.preview);
+                else setText(preview, child.preview);
+                item.append(preview);
+              }
+              list.append(item);
+            }
+            childrenPanel.append(list);
+          } catch (error) {
+            childrenPanel.replaceChildren(element("p", translatedError(error.message), "filter-message"));
+          }
+        });
+        kind.append(toggle);
+        card.append(kind, childrenPanel);
+      } else {
+        const localityTypes = Array.isArray(hit.typ_punktu_osadniczego)
+          ? hit.typ_punktu_osadniczego : hit.typ_punktu_osadniczego ? [hit.typ_punktu_osadniczego] : [];
+        const isLocality = localityTypes.length > 0;
+        const values = isLocality ? localityTypes : Array.isArray(hit.typ) ? hit.typ : hit.typ ? [hit.typ] : [];
+        if (values.length) {
+          const type = element("div", undefined, "result-meta");
+          type.style.marginTop = "10px";
+          for (const value of values) type.append(element("span", typeof value === "string" ? value : JSON.stringify(value), "tag"));
+          card.append(type);
+        }
+      }
+      $("browse-results").append(card);
+    }
+  } else {
+    setText($("browse-status"), t("noResults"));
+    $("browse-results").append(makeEmpty(t("browseEmpty"), ""));
+  }
+}
+async function loadBrowse(page = 1) {
+  const current = ++state.browseRequest;
+  state.browseData = null;
+  setText($("browse-status"), t("browseLoading"));
+  $("browse-results").replaceChildren();
+  $("browse-pagination").hidden = true;
+  $("browse-pagination-top").hidden = true;
+  const params = new URLSearchParams({tom: $("browse-volume").value, page: String(page)});
+  try {
+    const data = await api("api/v1/browse?" + params);
+    if (current !== state.browseRequest) return;
+    state.browseData = data;
+    renderBrowseResults(data);
+  } catch (error) {
+    if (current !== state.browseRequest) return;
+    setText($("browse-status"), translatedError(error.message));
+    $("browse-status").classList.add("error");
+    $("browse-pagination-top").hidden = true;
+    $("browse-results").append(makeEmpty(t("searchFailedTitle"), t("serviceRetry")));
+  }
+}
 function renderGminaChoices() {
   const select = $("gmina");
   const selected = select.value;
@@ -390,7 +549,7 @@ function renderGminaChoices() {
 function fillSelect(id, values) {
   const select = $(id);
   for (const value of values) {
-    const option = element("option", value);
+    const option = element("option", id === "tom" ? displayVolume(value) : value);
     option.value = value;
     select.append(option);
   }
@@ -411,7 +570,7 @@ async function loadFilterOptions() {
 function clearFilters() {
   for (const id of [...optionFields, "gmina-search", "gmina"]) $(id).value = "";
   $("kingdom-only").checked = false;
-  document.querySelector('input[name="locality"][value="all"]').checked = true;
+  document.querySelector('input[name="locality"][value="only"]').checked = true;
   updateLocalityUi();
   renderGminaChoices();
   updateFilterToggleLabel();
@@ -501,7 +660,7 @@ function renderAnswerMarkdown(target, raw) {
 function renderEntry() {
   const entry = state.entry;
   setText($("entry-title"), entry.nazwa);
-  setText($("entry-meta"), t("entryId", {id: entry.ID, volume: entry.tom, page: entry.strona,
+  setText($("entry-meta"), t("entryId", {id: entry.ID, volume: displayVolume(entry.tom), page: entry.strona,
     number: entry.nr ? t("entryNumber", {number: entry.nr}) : ""}));
   $("scan-link").hidden = !entry.url_skanu;
   if (entry.url_skanu) $("scan-link").href = entry.url_skanu;
@@ -541,8 +700,8 @@ function renderEntry() {
       element("mark", chars.slice(start, end).join("")),
       document.createTextNode(chars.slice(end).join("")));
   } else setText(content, entry.text);
-  $("parent-context").hidden = !entry.parent;
-  if (entry.parent) {
+  $("parent-context").hidden = !entry.parent || !state.showParentContext;
+  if (entry.parent && state.showParentContext) {
     $("parent-context").replaceChildren(element("h3", t("collectiveEntry", {name: entry.parent.nazwa})));
     const button = element("button", t("openCollective"), "button button-outline");
     button.type = "button";
@@ -550,10 +709,11 @@ function renderEntry() {
     $("parent-context").append(button);
   }
 }
-async function openEntry(id, start, end) {
+async function openEntry(id, start, end, showParentContext = true) {
   try {
     state.entry = await api("api/v1/entries/" + encodeURIComponent(id));
     state.highlight = Number.isInteger(start) && Number.isInteger(end) ? [start, end] : null;
+    state.showParentContext = showParentContext;
     renderEntry();
     if (!$("entry-dialog").open) $("entry-dialog").showModal();
     if (state.highlight && !state.entry.rendered_html) $("entry-content").querySelector("mark")?.scrollIntoView({block: "center"});
@@ -631,7 +791,7 @@ async function askChat(question, filters, history, answerNode, sourcesNode, stat
           sourcesNode.replaceChildren();
           for (const source of data.sources || []) {
             const item = element("li");
-            const location = [source.tom ? t("volumeShort", {volume: source.tom}) : "", source.strona ? t("pageShort", {page: source.strona}) : ""].filter(Boolean).join(", ");
+            const location = [source.tom ? t("volumeShort", {volume: displayVolume(source.tom)}) : "", source.strona ? t("pageShort", {page: source.strona}) : ""].filter(Boolean).join(", ");
             const button = element("button", "[" + source.citation + "] " + source.nazwa + (location ? " · " + location : ""));
             button.type = "button";
             button.addEventListener("click", () => openEntry(source.entry_id, source.start_offset, source.end_offset));
@@ -732,7 +892,7 @@ async function submitChat(event) {
     const result = await askChat(question, activeFilters(), state.chatHistory, nodes.answer, nodes.sources, nodes.status, controller.signal);
     if (generation !== state.chatGeneration) return;
     state.chatHistory.push({question, answer: result.answer.slice(0, CHAT_HISTORY_ANSWER_CHARS),
-      source_ids: (result.sources || []).map(source => source.passage_id),
+      source_ids: (result.sources || []).flatMap(source => source.passage_ids || [source.passage_id]).filter(Boolean),
       source_names: (result.sources || []).map(source => source.nazwa)});
     state.chatHistory = state.chatHistory.slice(-CHAT_HISTORY_TURNS);
     state.exportTurns.push({question, answer: result.answer, provider: result.provider, model: result.model,
@@ -767,20 +927,42 @@ async function initialize() {
   });
   $("tab-search").addEventListener("click", () => switchView("wyszukiwanie"));
   $("tab-assistant").addEventListener("click", () => switchView("konwersacja"));
+  $("tab-browse").addEventListener("click", () => { switchView("przegladanie"); loadBrowse(1); });
   $("tab-search").parentElement.addEventListener("keydown", event => {
     if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
     event.preventDefault();
-    const current = $("tab-assistant").getAttribute("aria-selected") === "true" ? "konwersacja" : "wyszukiwanie";
-    const next = event.key === "Home" ? "wyszukiwanie" : event.key === "End" ? "konwersacja" : (current === "konwersacja" ? "wyszukiwanie" : "konwersacja");
-    switchView(next);
-    $(next === "konwersacja" ? "tab-assistant" : "tab-search").focus();
+    const tabs = [
+      {id: "tab-search", view: "wyszukiwanie"},
+      {id: "tab-assistant", view: "konwersacja"},
+      {id: "tab-browse", view: "przegladanie"}
+    ];
+    const current = tabs.findIndex(tab => $(tab.id).getAttribute("aria-selected") === "true");
+    const nextIndex = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1
+      : (current + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+    const next = tabs[nextIndex];
+    switchView(next.view);
+    if (next.view === "przegladanie") loadBrowse(1);
+    $(next.id).focus();
   });
-  window.addEventListener("hashchange", () => switchView(viewFromHash(), false));
+  window.addEventListener("hashchange", () => {
+    const view = viewFromHash();
+    switchView(view, false);
+    if (view === "przegladanie") loadBrowse(1);
+  });
   $("open-help").addEventListener("click", () => $("help-dialog").showModal());
   $("close-help").addEventListener("click", () => $("help-dialog").close());
   $("search-form").addEventListener("submit", event => { event.preventDefault(); search(1); });
   $("prev").addEventListener("click", () => search(state.page - 1));
   $("next").addEventListener("click", () => search(state.page + 1));
+  $("browse-volume").addEventListener("change", () => loadBrowse(1));
+  $("browse-first-top").addEventListener("click", () => loadBrowse(1));
+  $("browse-prev-top").addEventListener("click", () => loadBrowse(state.browsePage - 1));
+  $("browse-next-top").addEventListener("click", () => loadBrowse(state.browsePage + 1));
+  $("browse-last-top").addEventListener("click", () => loadBrowse(Math.ceil(state.browseData.estimated_total_hits / state.browseData.page_size)));
+  $("browse-first").addEventListener("click", () => loadBrowse(1));
+  $("browse-prev").addEventListener("click", () => loadBrowse(state.browsePage - 1));
+  $("browse-next").addEventListener("click", () => loadBrowse(state.browsePage + 1));
+  $("browse-last").addEventListener("click", () => loadBrowse(Math.ceil(state.browseData.estimated_total_hits / state.browseData.page_size)));
   $("clear-filters").addEventListener("click", clearFilters);
   $("mobile-filter-toggle").addEventListener("click", () => {
     const expanded = $("search-filter-slot").classList.toggle("expanded");
@@ -825,7 +1007,9 @@ async function initialize() {
   }
   $("kingdom-only").checked = params.get("królestwo_polskie") === "true";
   updateLocalityUi();
-  switchView(viewFromHash(), false);
+  const initialView = viewFromHash();
+  switchView(initialView, false);
+  if (initialView === "przegladanie") loadBrowse(1);
   if ($("query").value.trim()) search(Number(params.get("page")) || 1);
 }
 initialize();
