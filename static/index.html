@@ -4,44 +4,53 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#1c4f89">
-  <title>SGKP — wyszukiwanie i konwersacja</title>
+  <title data-i18n="documentTitle">SGKP — wyszukiwanie i konwersacja</title>
   <link rel="stylesheet" href="static/styles.css">
   <script src="static/app.js" defer></script>
 </head>
 <body>
   <header class="site-header">
     <div class="header-inner">
-      <a class="brand" href="#wyszukiwanie" aria-label="SGKP — przejdź do wyszukiwania">
+      <a class="brand" href="#wyszukiwanie" aria-label="SGKP — przejdź do wyszukiwania" data-i18n-aria="brandAria">
         <span class="brand-mark" aria-hidden="true">SGKP</span>
-        <span class="brand-copy">Słownik Geograficzny<br>Królestwa Polskiego</span>
+        <span class="brand-copy" data-i18n="brandName">Słownik Geograficzny<br>Królestwa Polskiego</span>
       </a>
-      <nav class="primary-nav" role="tablist" aria-label="Widoki aplikacji">
-        <button id="tab-search" class="nav-tab" type="button" role="tab" aria-controls="search-view" aria-selected="true">Wyszukiwanie</button>
-        <button id="tab-assistant" class="nav-tab" type="button" role="tab" aria-controls="assistant-view" aria-selected="false">Konwersacja</button>
+      <nav class="primary-nav" role="tablist" aria-label="Widoki aplikacji" data-i18n-aria="viewsAria">
+        <button id="tab-search" class="nav-tab" type="button" role="tab" aria-controls="search-view" aria-selected="true" data-i18n="searchTab">Wyszukiwanie</button>
+        <button id="tab-assistant" class="nav-tab" type="button" role="tab" aria-controls="assistant-view" aria-selected="false" data-i18n="chatTab">Konwersacja</button>
       </nav>
-      <button id="open-help" class="help-button" type="button" aria-haspopup="dialog" aria-controls="help-dialog"><span aria-hidden="true">?</span> Pomoc</button>
+      <div class="header-actions">
+        <button id="theme-toggle" class="theme-button" type="button" aria-pressed="false" aria-label="Tryb dzienny. Włącz tryb nocny" title="Zmień motyw" data-i18n-title="themeToggleTitle">
+          <span class="theme-icon theme-day" aria-hidden="true">☀</span><span class="theme-icon theme-night" aria-hidden="true">☾</span>
+        </button>
+        <div class="language-switch" role="group" aria-label="Język interfejsu" data-i18n-aria="languageAria">
+          <button type="button" data-language="pl" aria-pressed="true">PL</button>
+          <button type="button" data-language="en" aria-pressed="false">EN</button>
+        </div>
+        <button id="open-help" class="help-button" type="button" aria-haspopup="dialog" aria-controls="help-dialog"><span class="help-icon" aria-hidden="true">?</span><span data-i18n="help">Pomoc</span></button>
+      </div>
     </div>
   </header>
 
   <main class="page-shell">
     <section id="search-view" class="view" role="tabpanel" aria-labelledby="tab-search">
-      <h1 class="sr-only">Wyszukiwanie w SGKP</h1>
-      <form id="search-form" class="search-form" role="search">
-        <label class="field-label" for="query">Szukaj w słowniku</label>
+      <h1 class="sr-only" data-i18n="searchPageTitle">Wyszukiwanie w SGKP</h1>
+      <form id="search-form" class="search-form" role="search" aria-label="Szukaj w słowniku" data-i18n-aria="searchLabel">
+        <label class="field-label" for="query" data-i18n="searchLabel">Szukaj w słowniku</label>
         <div class="search-row">
-          <input id="query" name="q" type="search" maxlength="300" required placeholder="Nazwa miejscowości, osoba lub słowa z hasła" autocomplete="off">
-          <button class="button button-primary search-submit" type="submit">Wyszukaj <span aria-hidden="true">→</span></button>
+          <input id="query" name="q" type="search" maxlength="300" required placeholder="Nazwa miejscowości, osoba lub słowa z hasła" data-i18n-placeholder="queryPlaceholder" autocomplete="off">
+          <button class="button button-primary search-submit" type="submit"><span data-i18n="searchButton">Wyszukaj</span> <span aria-hidden="true">→</span></button>
         </div>
         <div class="search-controls">
           <fieldset class="mode-group">
-            <legend>Tryb wyszukiwania</legend>
+            <legend data-i18n="searchMode">Tryb wyszukiwania</legend>
             <div class="segmented">
-              <label><input type="radio" name="mode" value="text" checked><span>Pełnotekstowe</span></label>
-              <label><input type="radio" name="mode" value="hybrid"><span>Hybrydowe</span></label>
-              <label><input type="radio" name="mode" value="semantic"><span>Semantyczne</span></label>
+              <label><input type="radio" name="mode" value="text" checked><span data-i18n="textMode">Pełnotekstowe</span></label>
+              <label><input type="radio" name="mode" value="hybrid"><span data-i18n="hybridMode">Hybrydowe</span></label>
+              <label><input type="radio" name="mode" value="semantic"><span data-i18n="semanticMode">Semantyczne</span></label>
             </div>
           </fieldset>
-          <label class="ratio-line" id="ratio-line" for="ratio">Udział semantyki
+          <label class="ratio-line" id="ratio-line" for="ratio"><span data-i18n="semanticShare">Udział semantyki</span>
             <input id="ratio" type="range" min="10" max="90" value="40">
             <output id="ratio-value">40%</output>
           </label>
@@ -49,43 +58,43 @@
       </form>
 
       <div class="search-workspace">
-        <aside id="search-filter-slot" class="filter-column" aria-label="Filtry wyszukiwania">
+        <aside id="search-filter-slot" class="filter-column" aria-label="Filtry wyszukiwania" data-i18n-aria="searchFiltersAria">
           <button id="mobile-filter-toggle" class="mobile-filter-toggle" type="button" aria-controls="filter-panel" aria-expanded="false">Pokaż filtry <span aria-hidden="true">⌄</span></button>
           <section id="filter-panel" class="filter-panel" aria-labelledby="filter-title">
             <div class="filter-heading">
-              <div><p class="eyebrow">Zawęź wyniki</p><h2 id="filter-title">Filtry</h2></div>
-              <button id="clear-filters" class="text-button" type="button">Wyczyść</button>
+              <div><p class="eyebrow" data-i18n="narrowResults">Zawęź wyniki</p><h2 id="filter-title" data-i18n="filters">Filtry</h2></div>
+              <button id="clear-filters" class="text-button" type="button" data-i18n="clear">Wyczyść</button>
             </div>
             <div class="filter-block">
-              <label class="field-label" for="tom">Tom</label>
-              <select id="tom"><option value="">Wszystkie tomy</option></select>
+              <label class="field-label" for="tom" data-i18n="volume">Tom</label>
+              <select id="tom"><option value="" data-i18n="allVolumes">Wszystkie tomy</option></select>
             </div>
             <div class="filter-block">
-              <label class="field-label" for="powiat_ujednolicony">Powiat</label>
-              <select id="powiat_ujednolicony"><option value="">Wszystkie powiaty</option></select>
+              <label class="field-label" for="powiat_ujednolicony" data-i18n="district">Powiat</label>
+              <select id="powiat_ujednolicony"><option value="" data-i18n="allDistricts">Wszystkie powiaty</option></select>
             </div>
             <fieldset class="filter-block locality-choice">
-              <legend class="field-label">Zakres haseł</legend>
-              <label class="radio-option"><input type="radio" name="locality" value="all" checked><span>Wszystkie hasła</span></label>
-              <label class="radio-option"><input type="radio" name="locality" value="only"><span>Tylko miejscowości</span></label>
+              <legend class="field-label" data-i18n="entryScope">Zakres haseł</legend>
+              <label class="radio-option"><input type="radio" name="locality" value="all" checked><span data-i18n="allEntries">Wszystkie hasła</span></label>
+              <label class="radio-option"><input type="radio" name="locality" value="only"><span data-i18n="placesOnly">Tylko miejscowości</span></label>
             </fieldset>
             <fieldset id="locality-options" class="locality-options" disabled>
-              <legend>Filtry miejscowości</legend>
-              <p id="locality-hint" class="field-hint">Dostępne po wybraniu „Tylko miejscowości”.</p>
-              <label class="checkbox-option"><input id="kingdom-only" type="checkbox"><span>Tylko Królestwo Polskie</span></label>
+              <legend data-i18n="localityFilters">Filtry miejscowości</legend>
+              <p id="locality-hint" class="field-hint" data-i18n="localityAvailability">Dostępne po wybraniu „Tylko miejscowości”.</p>
+              <label class="checkbox-option"><input id="kingdom-only" type="checkbox"><span data-i18n="kingdomOnly">Tylko Królestwo Polskie</span></label>
               <div class="filter-block">
-                <label class="field-label" for="typ_punktu_osadniczego">Typ miejscowości</label>
-                <select id="typ_punktu_osadniczego"><option value="">Wszystkie typy</option></select>
+                <label class="field-label" for="typ_punktu_osadniczego" data-i18n="settlementType">Typ miejscowości</label>
+                <select id="typ_punktu_osadniczego"><option value="" data-i18n="allTypes">Wszystkie typy</option></select>
               </div>
               <div class="filter-block">
-                <label class="field-label" for="gubernia_ujednolicona">Gubernia</label>
-                <select id="gubernia_ujednolicona"><option value="">Wszystkie gubernie</option></select>
+                <label class="field-label" for="gubernia_ujednolicona" data-i18n="governorate">Gubernia</label>
+                <select id="gubernia_ujednolicona"><option value="" data-i18n="allGovernorates">Wszystkie gubernie</option></select>
               </div>
               <div class="filter-block">
-                <label class="field-label" for="gmina-search">Gmina</label>
-                <input id="gmina-search" type="search" placeholder="Znajdź nazwę gminy" autocomplete="off" aria-describedby="gmina-hint">
-                <select id="gmina" aria-label="Wybierz gminę"><option value="">Wszystkie gminy</option></select>
-                <small id="gmina-hint" class="field-hint">Wpisz fragment nazwy, potem wybierz gminę z listy.</small>
+                <label class="field-label" for="gmina-search" data-i18n="commune">Gmina</label>
+                <input id="gmina-search" type="search" placeholder="Znajdź nazwę gminy" data-i18n-placeholder="findCommune" autocomplete="off" aria-describedby="gmina-hint">
+                <select id="gmina" aria-label="Wybierz gminę" data-i18n-aria="chooseCommune"><option value="" data-i18n="allCommunes">Wszystkie gminy</option></select>
+                <small id="gmina-hint" class="field-hint" data-i18n="communeHint">Wpisz fragment nazwy, potem wybierz gminę z listy.</small>
               </div>
             </fieldset>
             <p id="filter-options-status" class="filter-message" role="status"></p>
@@ -94,87 +103,87 @@
 
         <section class="results-column" aria-labelledby="results-title">
           <div class="result-heading">
-            <div><p class="eyebrow">Katalog haseł</p><h2 id="results-title">Wyniki wyszukiwania</h2></div>
-            <p id="status" role="status">Wpisz zapytanie, aby rozpocząć.</p>
+            <div><p class="eyebrow" data-i18n="catalog">Katalog haseł</p><h2 id="results-title" data-i18n="searchResults">Wyniki wyszukiwania</h2></div>
+            <p id="status" role="status" data-i18n="startSearch">Wpisz zapytanie, aby rozpocząć.</p>
           </div>
           <div id="results" class="results">
-            <div class="empty-state"><span class="empty-symbol" aria-hidden="true">⌕</span><h3>Zacznij od nazwy lub tematu</h3><p>Wprowadź zapytanie w polu powyżej.</p></div>
+            <div class="empty-state"><span class="empty-symbol" aria-hidden="true">⌕</span><h3 data-i18n="startByName">Zacznij od nazwy lub tematu</h3><p data-i18n="enterQuery">Wprowadź zapytanie w polu powyżej.</p></div>
           </div>
-          <nav id="pagination" class="pagination" aria-label="Strony wyników" hidden>
-            <button id="prev" class="button button-outline" type="button" disabled>← Poprzednia</button>
+          <nav id="pagination" class="pagination" aria-label="Strony wyników" data-i18n-aria="pagesLabel" hidden>
+            <button id="prev" class="button button-outline" type="button" disabled data-i18n="previous">← Poprzednia</button>
             <span id="page-label"></span>
-            <button id="next" class="button button-outline" type="button" disabled>Następna →</button>
+            <button id="next" class="button button-outline" type="button" disabled data-i18n="next">Następna →</button>
           </nav>
         </section>
       </div>
     </section>
 
     <section id="assistant-view" class="view" role="tabpanel" aria-labelledby="tab-assistant" hidden>
-      <h1 class="sr-only">Konwersacja o treści SGKP</h1>
+      <h1 class="sr-only" data-i18n="chatPageTitle">Konwersacja o treści SGKP</h1>
       <details id="assistant-filter-details" class="assistant-filters">
-        <summary>Filtry źródeł <span id="assistant-filter-hint">Ogranicz zakres odpowiedzi</span></summary>
+        <summary><span data-i18n="sourceFilters">Filtry źródeł</span> <span id="assistant-filter-hint">Ogranicz zakres odpowiedzi</span></summary>
         <div id="assistant-filter-slot"></div>
       </details>
       <div id="chat-intro" class="chat-intro">
-        <p class="eyebrow">Przykładowe pytania</p>
+        <p class="eyebrow" data-i18n="exampleQuestions">Przykładowe pytania</p>
         <div class="suggestions">
-          <button type="button" class="suggestion">W jakich miejscowościach znajdowały się uzdrowiska?</button>
-          <button type="button" class="suggestion">Czy Okuniew w powiecie warszawskim należał do Królestwa Polskiego?</button>
-          <button type="button" class="suggestion">Jakie typy osad wymieniono w powiecie wileńskim?</button>
-          <button type="button" class="suggestion">Gdzie leżały Zawady w powiecie warszawskim?</button>
-          <button type="button" class="suggestion">Jakie znaleziska archeologiczne znajdowały się w miejscowościach powiatu warszawskiego?</button>
-          <button type="button" class="suggestion">W których miejscowościach znajdowały się huty szkła?</button>
-          <button type="button" class="suggestion">Co słownik mówi o wydobyciu ropy naftowej w Borysławiu?</button>
+          <button type="button" class="suggestion" data-i18n="exampleSpas">W jakich miejscowościach znajdowały się uzdrowiska?</button>
+          <button type="button" class="suggestion" data-i18n="exampleKingdom">Czy Okuniew w powiecie warszawskim należał do Królestwa Polskiego?</button>
+          <button type="button" class="suggestion" data-i18n="exampleSettlements">Jakie typy osad wymieniono w powiecie wileńskim?</button>
+          <button type="button" class="suggestion" data-i18n="exampleZawady">Gdzie leżały Zawady w powiecie warszawskim?</button>
+          <button type="button" class="suggestion" data-i18n="exampleArchaeology">Jakie znaleziska archeologiczne znajdowały się w miejscowościach powiatu warszawskiego?</button>
+          <button type="button" class="suggestion" data-i18n="exampleGlassworks">W których miejscowościach znajdowały się huty szkła?</button>
+          <button type="button" class="suggestion" data-i18n="exampleOil">Co słownik mówi o wydobyciu ropy naftowej w Borysławiu?</button>
         </div>
       </div>
       <div id="conversation-actions" class="conversation-actions" hidden>
-        <button id="export-pdf" class="button button-outline" type="button" disabled>Pobierz PDF</button>
-        <button id="clear-chat" class="text-button" type="button">Wyczyść rozmowę</button>
+        <button id="export-pdf" class="button button-outline" type="button" disabled data-i18n="downloadPdf">Pobierz PDF</button>
+        <button id="clear-chat" class="text-button" type="button" data-i18n="clearConversation">Wyczyść rozmowę</button>
       </div>
       <div id="conversation" class="conversation" aria-live="polite"></div>
       <form id="chat-form" class="chat-composer">
-        <label for="question">Twoje pytanie</label>
+        <label for="question" data-i18n="yourQuestion">Twoje pytanie</label>
         <div class="composer-row">
-          <textarea id="question" maxlength="500" rows="2" required placeholder="Zapytaj o miejscowość, osobę lub zagadnienie opisane w słowniku…"></textarea>
-          <button id="chat-submit" class="button button-primary" type="submit">Zapytaj <span aria-hidden="true">↑</span></button>
+          <textarea id="question" maxlength="500" rows="2" required placeholder="Zapytaj o miejscowość, osobę lub zagadnienie opisane w słowniku…" data-i18n-placeholder="questionPlaceholder"></textarea>
+          <button id="chat-submit" class="button button-primary" type="submit"><span data-i18n="ask">Zapytaj</span> <span aria-hidden="true">↑</span></button>
         </div>
-        <p>Odpowiedzi generowane automatycznie należy weryfikować w przywołanych hasłach.</p>
+        <p data-i18n="verifyAnswers">Odpowiedzi generowane automatycznie należy weryfikować w przywołanych hasłach.</p>
       </form>
     </section>
   </main>
 
   <dialog id="help-dialog" class="help-dialog" aria-labelledby="help-title">
     <div class="dialog-head">
-      <div><p class="eyebrow">Pomoc</p><h2 id="help-title">Jak korzystać z SGKP?</h2></div>
-      <button id="close-help" class="button button-outline" type="button" aria-label="Zamknij pomoc">Zamknij ×</button>
+      <div><p class="eyebrow" data-i18n="help">Pomoc</p><h2 id="help-title" data-i18n="helpTitle">Jak korzystać z SGKP?</h2></div>
+      <button id="close-help" class="button button-outline" type="button" aria-label="Zamknij pomoc" data-i18n-aria="closeHelp"><span data-i18n="closeHelp">Zamknij</span> ×</button>
     </div>
     <div class="dialog-body help-content">
       <section>
-        <h3>O aplikacji</h3>
-        <p>Aplikacja udostępnia hasła z 16 tomów <em>Słownika geograficznego Królestwa Polskiego i innych krajów słowiańskich</em>. Tekst haseł pochodzi z odczytu OCR; przy każdym wyniku można otworzyć skan strony źródłowej.</p>
+        <h3 data-i18n="aboutApp">O aplikacji</h3>
+        <p data-i18n="aboutText">Aplikacja udostępnia hasła z 16 tomów <em>Słownika geograficznego Królestwa Polskiego i innych krajów słowiańskich</em>. Tekst haseł pochodzi z odczytu OCR; przy każdym wyniku można otworzyć skan strony źródłowej.</p>
       </section>
       <section>
-        <h3>Wyszukiwanie</h3>
-        <p>Wpisz nazwę albo wyrażenie i wybierz tryb: pełnotekstowy, hybrydowy lub semantyczny. Filtry pozwalają zawęzić wyniki do tomów, powiatów i miejscowości. Kliknij nazwę wyniku, aby przeczytać całe hasło.</p>
+        <h3 data-i18n="helpSearchTitle">Wyszukiwanie</h3>
+        <p data-i18n="helpSearchText">Wpisz nazwę albo wyrażenie i wybierz tryb: pełnotekstowy, hybrydowy lub semantyczny. Filtry pozwalają zawęzić wyniki do tomów, powiatów i miejscowości. Kliknij nazwę wyniku, aby przeczytać całe hasło.</p>
       </section>
       <section>
-        <h3>Konwersacja</h3>
-        <p>Zadaj pytanie o treść słownika. Odpowiedź powstaje na podstawie odnalezionych fragmentów haseł i zawiera odsyłacze do wykorzystanych źródeł. Otwórz cytowane hasła, aby sprawdzić odpowiedź. Możesz zadać pytanie doprecyzowujące odnoszące się do poprzednich odpowiedzi. Przycisk „Pobierz PDF” zapisuje bieżącą konwersację wraz ze źródłami; „Wyczyść rozmowę” usuwa ją z karty przeglądarki. Gdy model lokalny jest niedostępny, bieżące pytanie, krótka historia rozmowy i znalezione fragmenty są przesyłane do usługi OpenAI; aplikacja oznacza taką odpowiedź. Konwersacja nie służy do sporządzania pełnych zestawień wszystkich miejscowości.</p>
+        <h3 data-i18n="helpChatTitle">Konwersacja</h3>
+        <p data-i18n="helpChatText">Zadaj pytanie o treść słownika. Odpowiedź powstaje na podstawie odnalezionych fragmentów haseł i zawiera odsyłacze do wykorzystanych źródeł. Otwórz cytowane hasła, aby sprawdzić odpowiedź. Możesz zadać pytanie doprecyzowujące odnoszące się do poprzednich odpowiedzi. Przycisk „Pobierz PDF” zapisuje bieżącą konwersację wraz ze źródłami; „Wyczyść rozmowę” usuwa ją z karty przeglądarki. Gdy model lokalny jest niedostępny, bieżące pytanie, krótka historia rozmowy i znalezione fragmenty są przesyłane do usługi OpenAI; aplikacja oznacza taką odpowiedź. Konwersacja nie służy do sporządzania pełnych zestawień wszystkich miejscowości.</p>
       </section>
     </div>
   </dialog>
 
   <dialog id="entry-dialog" aria-labelledby="entry-title">
     <div class="dialog-head entry-dialog-head">
-      <div class="entry-heading"><p class="eyebrow">Hasło słownikowe</p><h2 id="entry-title"></h2></div>
+      <div class="entry-heading"><p class="eyebrow" data-i18n="dictionaryEntry">Hasło słownikowe</p><h2 id="entry-title"></h2></div>
       <div class="entry-dialog-actions">
-        <a id="scan-link" class="button button-outline" target="_blank" rel="noopener noreferrer" aria-label="Otwórz skan strony"><span class="scan-label-full">Otwórz skan strony</span><span class="scan-label-short" aria-hidden="true">Skan</span><span aria-hidden="true">↗</span></a>
-        <button id="close-dialog" class="dialog-close" type="button" aria-label="Zamknij hasło">×</button>
+        <a id="scan-link" class="button button-outline" target="_blank" rel="noopener noreferrer" aria-label="Otwórz skan strony" data-i18n-aria="entryScanAria"><span class="scan-label-full" data-i18n="openScan">Otwórz skan strony</span><span class="scan-label-short" aria-hidden="true" data-i18n="scan">Skan</span><span aria-hidden="true">↗</span></a>
+        <button id="close-dialog" class="dialog-close" type="button" aria-label="Zamknij hasło" data-i18n-aria="closeEntry">×</button>
       </div>
     </div>
     <div class="dialog-body">
       <div id="entry-meta" class="entry-meta"></div>
-      <details id="entry-fields" class="entry-fields"><summary>Metadane hasła</summary><dl id="entry-fields-list"></dl></details>
+      <details id="entry-fields" class="entry-fields"><summary data-i18n="entryMetadata">Metadane hasła</summary><dl id="entry-fields-list"></dl></details>
       <div id="entry-content" class="entry-text"></div>
       <div id="parent-context" class="parent-context" hidden></div>
     </div>

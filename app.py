@@ -783,6 +783,7 @@ def chat():
     if not 1 <= len(question) <= 500:
         raise ValueError("Pytanie musi zawierać od 1 do 500 znaków")
     history = validated_chat_history(body.get("history", []))
+    language = "en" if body.get("language") == "en" else "pl"
     selected_filters = body.get("filters") or {}
     expression = filters(selected_filters)
     mentioned_names = model_named_subjects(question)
@@ -883,7 +884,10 @@ def chat():
         else:
             add_hits(background, background_limit)
     if not sources:
-        empty = {"answer": "Wyniki wyszukiwania nie pozwalają odpowiedzieć na to pytanie.", "sources": []}
+        empty_answer = ("The search results do not provide enough information to answer this question."
+                        if language == "en" else
+                        "Wyniki wyszukiwania nie pozwalają odpowiedzieć na to pytanie.")
+        empty = {"answer": empty_answer, "sources": []}
         if body.get("diagnostics") is True:
             empty["retrieved_passage_ids"] = []
         if "text/event-stream" in request.headers.get("Accept", ""):
@@ -907,7 +911,9 @@ def chat():
         f"{source_metadata_text(x)}"
         f"Opis: {source_excerpt(descriptive_source_text(x), question, CHAT_EVIDENCE_CHARS)}"
         for i, x in enumerate(sources, 1))
-    instructions = ("Odpowiadaj po polsku wyłącznie na podstawie znalezionych fragmentów SGKP. "
+    answer_language = ("Answer in English using only the retrieved SGKP passages. " if language == "en"
+                       else "Odpowiadaj po polsku wyłącznie na podstawie znalezionych fragmentów SGKP. ")
+    instructions = (answer_language +
         "Zacznij od odpowiedzi na pytanie, bez wstępu typu «W przekazanych fragmentach». "
         "Jeśli trzeba określić zakres ustaleń, użyj sformułowania «W wynikach wyszukiwania» lub «Wśród znalezionych haseł». "
         "Każde twierdzenie faktograficzne oznacz [n] wskazując właściwy fragment. "
