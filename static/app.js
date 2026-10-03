@@ -13,7 +13,7 @@ const UI_COPY = {
     searchPageTitle: "Wyszukiwanie w SGKP", chatPageTitle: "Konwersacja o treści SGKP", browsePageTitle: "Przeglądanie haseł SGKP",
     searchFiltersAria: "Filtry wyszukiwania", searchTab: "Wyszukiwanie", chatTab: "Konwersacja", browseTab: "Przeglądanie",
     browseHeading: "Przeglądanie haseł", browseVolume: "Tom", browseAllVolumes: "Wybierz tom",
-    browseLoading: "Wczytuję hasła…", browseInitial: "Wybierz tom, aby wyświetlić listę haseł.", browseRange: "Hasła {start}–{end} z {total}", browseEmpty: "Brak haseł w tym tomie.", browsePages: "Strony listy haseł", firstPage: "Początek", lastPage: "Koniec",
+    browseLoading: "Wczytuję hasła…", browseInitial: "Wybierz tom, aby wyświetlić listę haseł.", browseRange: "Hasła {start}–{end} z {total}", browseEmpty: "Brak haseł w tym tomie.", browsePages: "Strony listy haseł", browseViewLabel: "Widok haseł", browseListView: "Widok listy", browseGridView: "Widok siatki", firstPage: "Początek", lastPage: "Koniec",
     collectiveKind: "Hasło zbiorcze", showSubentries: "Pokaż podhasła", hideSubentries: "Ukryj podhasła",
     loadingSubentries: "Wczytuję podhasła…", noSubentries: "To hasło nie zawiera podhaseł.", subentriesTitle: "Podhasła",
     help: "Pomoc", projectCredit: "Aplikacja przygotowana w Pracowni Historii Cyfrowej IHPAN w ramach projektu „Geografia kulturowo-intelektualna dawnych ziem polskich pod zaborami 1865–1918 – cyfrowe vademecum” prowadzonego w Instytucie Historii Polskiej Akademii Nauk.",
@@ -79,7 +79,7 @@ const UI_COPY = {
     searchPageTitle: "Search SGKP", chatPageTitle: "Conversation about SGKP", browsePageTitle: "Browse SGKP entries",
     searchFiltersAria: "Search filters", searchTab: "Search", chatTab: "Conversation", browseTab: "Browse entries",
     browseHeading: "Browse entries", browseVolume: "Volume", browseAllVolumes: "Select a volume",
-    browseLoading: "Loading entries…", browseInitial: "Select a volume to browse its entries.", browseRange: "Entries {start}–{end} of {total}", browseEmpty: "No entries in this volume.", browsePages: "Entry list pages", firstPage: "First", lastPage: "Last",
+    browseLoading: "Loading entries…", browseInitial: "Select a volume to browse its entries.", browseRange: "Entries {start}–{end} of {total}", browseEmpty: "No entries in this volume.", browsePages: "Entry list pages", browseViewLabel: "Entry view", browseListView: "List view", browseGridView: "Grid view", firstPage: "First", lastPage: "Last",
     collectiveKind: "Collective entry", showSubentries: "Show subentries", hideSubentries: "Hide subentries",
     loadingSubentries: "Loading subentries…", noSubentries: "This entry has no subentries.", subentriesTitle: "Subentries",
     help: "Help", projectCredit: "This application was prepared by the Digital History Laboratory at the Institute of History of the Polish Academy of Sciences as part of the project “Geografia kulturowo-intelektualna dawnych ziem polskich pod zaborami 1865–1918 – cyfrowe vademecum”.",
@@ -143,7 +143,7 @@ const UI_COPY = {
 let currentLanguage = "pl";
 const state = { page: 1, hasNext: false, entry: null, highlight: null, request: 0, gminas: [], chatBusy: false,
   chatController: null, chatGeneration: 0, chatHistory: [], exportTurns: [], searchData: null,
-  browsePage: 1, browseHasNext: false, browseData: null, browseRequest: 0, showParentContext: true };
+  browsePage: 1, browseHasNext: false, browseData: null, browseRequest: 0, browseView: "list", showParentContext: true };
 
 function setText(node, value) { node.textContent = value == null ? "" : String(value); }
 function t(key, values = {}) {
@@ -370,6 +370,35 @@ function resultCard(hit) {
   if (hit.snippet) card.append(snippetNode(hit));
   return card;
 }
+function browseGridCard(hit) {
+  const card = element("article", undefined, "result-card browse-grid-card");
+  const title = element("h3");
+  const open = element("button", hit.nazwa || hit.ID);
+  open.type = "button";
+  open.addEventListener("click", () => openEntry(hit.ID));
+  title.append(open);
+  card.append(title);
+  const meta = element("div", undefined, "result-meta");
+  meta.append(element("span", t("volumePage", {volume: displayVolume(hit.tom), page: hit.strona || "—"})));
+  if (hit.url_skanu) meta.append(externalLink(t("scanPage"), hit.url_skanu));
+  card.append(meta);
+  const values = hit.rodzaj === "zbiorcze" ? [t("collectiveKind")] :
+    (Array.isArray(hit.typ_punktu_osadniczego) && hit.typ_punktu_osadniczego.length
+      ? hit.typ_punktu_osadniczego
+      : Array.isArray(hit.typ) ? hit.typ : hit.typ ? [hit.typ] : []);
+  if (values.length) {
+    const types = element("div", undefined, "browse-grid-types");
+    for (const value of values) types.append(element("span", typeof value === "string" ? value : JSON.stringify(value), "tag"));
+    card.append(types);
+  }
+  return card;
+}
+function setBrowseView(view) {
+  state.browseView = view === "grid" ? "grid" : "list";
+  $("browse-view-list").setAttribute("aria-pressed", String(state.browseView === "list"));
+  $("browse-view-grid").setAttribute("aria-pressed", String(state.browseView === "grid"));
+  if (state.browseData) renderBrowseResults(state.browseData);
+}
 function renderSearchResults(data) {
   state.page = data.page;
   state.hasNext = data.has_next;
@@ -424,11 +453,16 @@ function renderBrowseResults(data) {
     $("browse-pagination" + suffix).hidden = !data.hits.length;
   }
   $("browse-results").replaceChildren();
+  $("browse-results").classList.toggle("browse-grid", state.browseView === "grid");
   if (data.hits.length) {
     const start = (data.page - 1) * data.page_size + 1;
     const end = start + data.hits.length - 1;
     setText($("browse-status"), t("browseRange", {start, end, total: data.estimated_total_hits}));
     for (const hit of data.hits) {
+      if (state.browseView === "grid") {
+        $("browse-results").append(browseGridCard(hit));
+        continue;
+      }
       const card = resultCard({...hit, typ_punktu_osadniczego: [], snippet: hit.preview,
         snippet_is_markdown: hit.preview_is_markdown});
       if (hit.rodzaj === "zbiorcze") {
@@ -666,13 +700,15 @@ function renderAnswerMarkdown(target, raw) {
   }
   flushParagraph();
 }
-function structuredMetadataNode(field, value) {
+function structuredMetadataNode(field, value, entryName) {
   const groups = Array.isArray(value) ? value : [value];
   const result = element("div", undefined, "metadata-groups");
   for (const group of groups) {
     if (!group || typeof group !== "object" || Array.isArray(group)) continue;
     const section = element("div", undefined, "metadata-group");
-    if (group.dotyczy) section.append(element("strong", group.dotyczy, "metadata-group-title"));
+    const scope = typeof group.dotyczy === "string" && group.dotyczy.trim().toLocaleLowerCase("pl-PL") === "główna miejscowość"
+      ? entryName : group.dotyczy;
+    if (scope) section.append(element("strong", scope, "metadata-group-title"));
     const list = element("ul", undefined, "metadata-detail-list");
     let details = [];
     if (field === "parafia_inna") {
@@ -703,7 +739,8 @@ function structuredMetadataNode(field, value) {
         if (typeof detail === "object") {
           const number = detail.liczba;
           if (number === null || number === undefined || number === "") continue;
-          const date = detail.data;
+          const date = typeof detail.data === "string" && detail.data.trim().toLocaleLowerCase("pl-PL") === "obecnie"
+            ? "" : detail.data;
           list.append(element("li", date ? `${date}: ${number}` : String(number)));
         } else list.append(element("li", String(detail)));
       }
@@ -738,7 +775,7 @@ function renderEntry() {
     let value = entry.metadata[key];
     if (value === null || value === undefined || value === "" || (Array.isArray(value) && !value.length)) continue;
     if (["parafia_inna", "l_mk_statystyka", "l_dm_statystyka", "ludność_wyznanie"].includes(key)) {
-      const formatted = structuredMetadataNode(key, value);
+      const formatted = structuredMetadataNode(key, value, entry.nazwa);
       if (!formatted) continue;
       const definition = element("dd");
       definition.append(formatted);
@@ -1023,6 +1060,8 @@ async function initialize() {
   $("prev").addEventListener("click", () => search(state.page - 1));
   $("next").addEventListener("click", () => search(state.page + 1));
   $("browse-volume").addEventListener("change", () => loadBrowse(1));
+  $("browse-view-list").addEventListener("click", () => setBrowseView("list"));
+  $("browse-view-grid").addEventListener("click", () => setBrowseView("grid"));
   $("browse-first-top").addEventListener("click", () => loadBrowse(1));
   $("browse-prev-top").addEventListener("click", () => loadBrowse(state.browsePage - 1));
   $("browse-next-top").addEventListener("click", () => loadBrowse(state.browsePage + 1));

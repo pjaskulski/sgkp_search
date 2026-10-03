@@ -177,6 +177,16 @@
           <button id="browse-next-top" class="button button-outline" type="button" disabled data-i18n="next">Następna →</button>
           <button id="browse-last-top" class="button button-outline" type="button" disabled data-i18n="lastPage">Koniec</button>
         </nav>
+        <div class="browse-view-switch" role="group" aria-label="Widok listy haseł" data-i18n-aria="browseViewLabel">
+          <button id="browse-view-list" class="browse-view-button" type="button" aria-pressed="true"
+                  aria-label="Widok listy" title="Widok listy" data-i18n-aria="browseListView" data-i18n-title="browseListView">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4h10M7 10h10M7 16h10M3 4h.01M3 10h.01M3 16h.01"/></svg>
+          </button>
+          <button id="browse-view-grid" class="browse-view-button" type="button" aria-pressed="false"
+                  aria-label="Widok siatki" title="Widok siatki" data-i18n-aria="browseGridView" data-i18n-title="browseGridView">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3h5v5H3zM12 3h5v5h-5zM3 12h5v5H3zM12 12h5v5h-5z"/></svg>
+          </button>
+        </div>
       </div>
       <div id="browse-results" class="results"></div>
       <nav id="browse-pagination" class="pagination" aria-label="Strony listy haseł" data-i18n-aria="browsePages" hidden>
