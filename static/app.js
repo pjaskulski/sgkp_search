@@ -17,6 +17,7 @@ const UI_COPY = {
     collectiveKind: "Hasło zbiorcze", showSubentries: "Pokaż podhasła", hideSubentries: "Ukryj podhasła",
     loadingSubentries: "Wczytuję podhasła…", noSubentries: "To hasło nie zawiera podhaseł.", subentriesTitle: "Podhasła",
     help: "Pomoc", searchLabel: "Szukaj w słowniku", queryPlaceholder: "Nazwa miejscowości, osoba lub słowa z hasła",
+    semanticQueryPlaceholder: "Oczekiwana tematyka, np. 'wydobywanie surowców' lub 'mielenie ziarna'",
     searchButton: "Wyszukaj", searchMode: "Tryb wyszukiwania", textMode: "Pełnotekstowe", hybridMode: "Hybrydowe",
     semanticMode: "Semantyczne", semanticShare: "Udział semantyki", mobileShowFilters: "Pokaż filtry",
     mobileHideFilters: "Ukryj filtry", narrowResults: "Zawęź wyniki", filters: "Filtry", clear: "Wyczyść",
@@ -38,7 +39,7 @@ const UI_COPY = {
     clearConversation: "Wyczyść rozmowę", yourQuestion: "Twoje pytanie",
     questionPlaceholder: "Zapytaj o miejscowość, osobę lub zagadnienie opisane w słowniku…", ask: "Zapytaj",
     verifyAnswers: "Odpowiedzi generowane automatycznie należy weryfikować w przywołanych hasłach.",
-    helpTitle: "Jak korzystać z SGKP?", aboutApp: "O aplikacji", aboutText: "Aplikacja udostępnia hasła z 16 tomów Słownika Geograficznego Królestwa Polskiego i innych krajów słowiańskich. Tekst pochodzi z odczytu OCR; przy każdym wyniku można otworzyć skan strony źródłowej.",
+    helpTitle: "Jak korzystać z SGKP?", aboutApp: "O aplikacji", aboutText: "Aplikacja udostępnia hasła z 16 tomów Słownika Geograficznego Królestwa Polskiego i innych krajów słowiańskich. Tekst pochodzi z odczytu OCR; przy każdym wyniku można otworzyć skan strony źródłowej. Obecna wersja aplikacji jest prototypem, mogą występować problemy i częste zmiany w sposobie działania aplikacji. Dane dostępne w aplikacji (tekst SGKP i metadane) również są modyfikowane w wyniku trwającej weryfikacji błędów.",
     helpSearchTitle: "Wyszukiwanie", helpSearchText: "Wpisz nazwę albo wyrażenie i wybierz tryb: pełnotekstowy, hybrydowy lub semantyczny. Filtry pozwalają zawęzić wyniki do tomów, powiatów i miejscowości. Kliknij nazwę wyniku, aby przeczytać całe hasło.",
     helpChatTitle: "Konwersacja", helpChatText: "Zadaj pytanie o treść słownika. Odpowiedź powstaje na podstawie odnalezionych fragmentów haseł i zawiera odsyłacze do wykorzystanych źródeł. Otwórz cytowane hasła, aby sprawdzić odpowiedź. Możesz zadać pytanie doprecyzowujące odnoszące się do poprzednich odpowiedzi. „Pobierz PDF” zapisuje bieżącą konwersację wraz ze źródłami; „Wyczyść rozmowę” usuwa ją z tej karty przeglądarki. Gdy model lokalny jest niedostępny, pytanie, krótka historia rozmowy i znalezione fragmenty są przesyłane do OpenAI; aplikacja oznacza taką odpowiedź. Konwersacja nie służy do sporządzania pełnych zestawień wszystkich miejscowości.",
     closeHelp: "Zamknij pomoc", dictionaryEntry: "Hasło słownikowe", openScan: "Otwórz skan strony", scan: "Skan",
@@ -80,6 +81,7 @@ const UI_COPY = {
     collectiveKind: "Collective entry", showSubentries: "Show subentries", hideSubentries: "Hide subentries",
     loadingSubentries: "Loading subentries…", noSubentries: "This entry has no subentries.", subentriesTitle: "Subentries",
     help: "Help", searchLabel: "Search the dictionary", queryPlaceholder: "Place name, person, or words from an entry",
+    semanticQueryPlaceholder: "Topic, e.g. raw material extraction or grain milling",
     searchButton: "Search", searchMode: "Search mode", textMode: "Full-text", hybridMode: "Hybrid",
     semanticMode: "Semantic", semanticShare: "Semantic share", mobileShowFilters: "Show filters",
     mobileHideFilters: "Hide filters", narrowResults: "Refine results", filters: "Filters", clear: "Clear",
@@ -101,7 +103,7 @@ const UI_COPY = {
     clearConversation: "Clear conversation", yourQuestion: "Your question",
     questionPlaceholder: "Ask about a place, person, or subject described in the dictionary…", ask: "Ask",
     verifyAnswers: "Automatically generated answers should be checked against the cited entries.",
-    helpTitle: "How to use SGKP?", aboutApp: "About the application", aboutText: "This application provides entries from all 16 volumes of the Geographical Dictionary of the Kingdom of Poland and Other Slavic Countries. The text comes from OCR; each result links to a scan of the source page.",
+    helpTitle: "How to use SGKP?", aboutApp: "About the application", aboutText: "This application provides entries from all 16 volumes of the Geographical Dictionary of the Kingdom of Poland and Other Slavic Countries. The text comes from OCR; each result links to a scan of the source page. The current version of the application is a prototype, so issues may occur and the way the application works may change frequently. The data available in the application (the SGKP text and metadata) are also subject to change as part of the ongoing error verification process.",
     helpSearchTitle: "Searching", helpSearchText: "Enter a name or phrase and choose full-text, hybrid, or semantic search. Filters can narrow results by volume, district, and locality. Select a result title to read the full entry.",
     helpChatTitle: "Conversation", helpChatText: "Ask a question about the dictionary. Answers are based on retrieved entry passages and include citations to the sources. Open cited entries to verify an answer. You can ask follow-up questions about earlier answers. “Download PDF” saves the conversation with its sources; “Clear conversation” removes it from this browser tab. If the local model is unavailable, the current question, a short conversation history, and retrieved passages are sent to OpenAI; the application identifies answers generated this way. The conversation is not intended to produce exhaustive lists of every locality.",
     closeHelp: "Close help", dictionaryEntry: "Dictionary entry", openScan: "Open page scan", scan: "Scan",
@@ -178,6 +180,7 @@ function applyLanguage(language, persist = false) {
     ? (document.documentElement.dataset.theme === "dark" ? "Dark theme. Switch to light theme" : "Light theme. Switch to dark theme")
     : (document.documentElement.dataset.theme === "dark" ? "Tryb nocny. Włącz tryb dzienny" : "Tryb dzienny. Włącz tryb nocny"));
   updateFilterToggleLabel();
+  modeUi();
   if (state.gminas.length) renderGminaChoices();
   if (state.searchData) renderSearchResults(state.searchData);
   if (state.browseData) renderBrowseResults(state.browseData);
@@ -286,7 +289,9 @@ function updateLocalityUi(clear = false) {
   updateFilterToggleLabel();
 }
 function modeUi() {
-  $("ratio-line").classList.toggle("visible", selectedMode() === "hybrid");
+  const mode = selectedMode();
+  $("ratio-line").classList.toggle("visible", mode === "hybrid");
+  $("query").placeholder = t(mode === "semantic" ? "semanticQueryPlaceholder" : "queryPlaceholder");
 }
 function viewFromHash() {
   if (["#konwersacja", "#asystent"].includes(location.hash)) return "konwersacja";
