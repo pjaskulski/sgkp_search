@@ -342,6 +342,7 @@ html[data-theme="dark"] .dialog-close,
 html[data-theme="dark"] .footer-contact,
 html[data-theme="dark"] .mobile-filter-toggle,
 html[data-theme="dark"] .suggestion { background-color: var(--white); color: var(--ink); }
+html[data-theme="dark"] dialog { border: 1px solid #526b85; background: #243b53; color: var(--ink); }
 html[data-theme="dark"] .brand-mark { background: #243c56; color: var(--accent-dark); }
 html[data-theme="dark"] .nav-tab { color: #afc1d5; }
 html[data-theme="dark"] .nav-tab:hover,
