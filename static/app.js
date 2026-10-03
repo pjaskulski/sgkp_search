@@ -16,7 +16,8 @@ const UI_COPY = {
     browseLoading: "Wczytuję hasła…", browseInitial: "Wybierz tom, aby wyświetlić listę haseł.", browseRange: "Hasła {start}–{end} z {total}", browseEmpty: "Brak haseł w tym tomie.", browsePages: "Strony listy haseł", firstPage: "Początek", lastPage: "Koniec",
     collectiveKind: "Hasło zbiorcze", showSubentries: "Pokaż podhasła", hideSubentries: "Ukryj podhasła",
     loadingSubentries: "Wczytuję podhasła…", noSubentries: "To hasło nie zawiera podhaseł.", subentriesTitle: "Podhasła",
-    help: "Pomoc", searchLabel: "Szukaj w słowniku", queryPlaceholder: "Nazwa miejscowości, osoba lub słowa z hasła",
+    help: "Pomoc", projectCredit: "Aplikacja przygotowana w Pracowni Historii Cyfrowej IHPAN w ramach projektu „Geografia kulturowo-intelektualna dawnych ziem polskich pod zaborami 1865–1918 – cyfrowe vademecum” prowadzonego w Instytucie Historii Polskiej Akademii Nauk.",
+    contactLabel: "Skontaktuj się z nami", searchLabel: "Szukaj w słowniku", queryPlaceholder: "Nazwa miejscowości, osoba lub słowa z hasła",
     semanticQueryPlaceholder: "Oczekiwana tematyka, np. 'wydobywanie surowców' lub 'mielenie ziarna'",
     searchButton: "Wyszukaj", searchMode: "Tryb wyszukiwania", textMode: "Pełnotekstowe", hybridMode: "Hybrydowe",
     semanticMode: "Semantyczne", semanticShare: "Udział semantyki", mobileShowFilters: "Pokaż filtry",
@@ -44,7 +45,8 @@ const UI_COPY = {
     helpChatTitle: "Konwersacja", helpChatText: "Zadaj pytanie o treść słownika. Odpowiedź powstaje na podstawie odnalezionych fragmentów haseł i zawiera odsyłacze do wykorzystanych źródeł. Otwórz cytowane hasła, aby sprawdzić odpowiedź. Możesz zadać pytanie doprecyzowujące odnoszące się do poprzednich odpowiedzi. „Pobierz PDF” zapisuje bieżącą konwersację wraz ze źródłami; „Wyczyść rozmowę” usuwa ją z tej karty przeglądarki. Gdy model lokalny jest niedostępny, pytanie, krótka historia rozmowy i znalezione fragmenty są przesyłane do OpenAI; aplikacja oznacza taką odpowiedź. Konwersacja nie służy do sporządzania pełnych zestawień wszystkich miejscowości.",
     closeHelp: "Zamknij pomoc", dictionaryEntry: "Hasło słownikowe", openScan: "Otwórz skan strony", scan: "Skan",
     closeEntry: "Zamknij hasło", entryMetadata: "Metadane hasła", entryType: "Typ", localityType: "Typ miejscowości",
-    locationDescription: "Opis lokalizacji", catholicParish: "Parafia katolicka", religiousSites: "Obiekty sakralne",
+    locationDescription: "Opis lokalizacji", catholicParish: "Parafia katolicka", otherParish: "Inna parafia", religiousSites: "Obiekty sakralne",
+    populationStatistics: "Liczba mieszkańców", dwellingStatistics: "Liczba domów", religiousStructure: "Struktura wyznaniowa",
     industry: "Przemysł", mills: "Młyny", archaeology: "Archeologia", nameVariants: "Warianty nazw",
     yes: "Tak", no: "Nie", collectiveEntry: "Hasło zbiorcze: {name}", openCollective: "Otwórz hasło zbiorcze",
     searching: "Wyszukiwanie…", resultsRange: "Wyniki {start}–{end} · około {total} trafień", noResults: "Brak wyników",
@@ -80,7 +82,8 @@ const UI_COPY = {
     browseLoading: "Loading entries…", browseInitial: "Select a volume to browse its entries.", browseRange: "Entries {start}–{end} of {total}", browseEmpty: "No entries in this volume.", browsePages: "Entry list pages", firstPage: "First", lastPage: "Last",
     collectiveKind: "Collective entry", showSubentries: "Show subentries", hideSubentries: "Hide subentries",
     loadingSubentries: "Loading subentries…", noSubentries: "This entry has no subentries.", subentriesTitle: "Subentries",
-    help: "Help", searchLabel: "Search the dictionary", queryPlaceholder: "Place name, person, or words from an entry",
+    help: "Help", projectCredit: "This application was prepared by the Digital History Laboratory at the Institute of History of the Polish Academy of Sciences as part of the project “Geografia kulturowo-intelektualna dawnych ziem polskich pod zaborami 1865–1918 – cyfrowe vademecum”.",
+    contactLabel: "Contact us", searchLabel: "Search the dictionary", queryPlaceholder: "Place name, person, or words from an entry",
     semanticQueryPlaceholder: "Topic, e.g. raw material extraction or grain milling",
     searchButton: "Search", searchMode: "Search mode", textMode: "Full-text", hybridMode: "Hybrid",
     semanticMode: "Semantic", semanticShare: "Semantic share", mobileShowFilters: "Show filters",
@@ -108,7 +111,8 @@ const UI_COPY = {
     helpChatTitle: "Conversation", helpChatText: "Ask a question about the dictionary. Answers are based on retrieved entry passages and include citations to the sources. Open cited entries to verify an answer. You can ask follow-up questions about earlier answers. “Download PDF” saves the conversation with its sources; “Clear conversation” removes it from this browser tab. If the local model is unavailable, the current question, a short conversation history, and retrieved passages are sent to OpenAI; the application identifies answers generated this way. The conversation is not intended to produce exhaustive lists of every locality.",
     closeHelp: "Close help", dictionaryEntry: "Dictionary entry", openScan: "Open page scan", scan: "Scan",
     closeEntry: "Close entry", entryMetadata: "Entry metadata", entryType: "Type", localityType: "Settlement type",
-    locationDescription: "Location description", catholicParish: "Catholic parish", religiousSites: "Religious sites",
+    locationDescription: "Location description", catholicParish: "Catholic parish", otherParish: "Other parish", religiousSites: "Religious sites",
+    populationStatistics: "Population", dwellingStatistics: "Number of houses", religiousStructure: "Religious composition",
     industry: "Industry", mills: "Mills", archaeology: "Archaeology", nameVariants: "Name variants",
     yes: "Yes", no: "No", collectiveEntry: "Collective entry: {name}", openCollective: "Open collective entry",
     searching: "Searching…", resultsRange: "Results {start}–{end} · about {total} hits", noResults: "No results",
@@ -662,6 +666,53 @@ function renderAnswerMarkdown(target, raw) {
   }
   flushParagraph();
 }
+function structuredMetadataNode(field, value) {
+  const groups = Array.isArray(value) ? value : [value];
+  const result = element("div", undefined, "metadata-groups");
+  for (const group of groups) {
+    if (!group || typeof group !== "object" || Array.isArray(group)) continue;
+    const section = element("div", undefined, "metadata-group");
+    if (group.dotyczy) section.append(element("strong", group.dotyczy, "metadata-group-title"));
+    const list = element("ul", undefined, "metadata-detail-list");
+    let details = [];
+    if (field === "parafia_inna") {
+      details = Array.isArray(group) ? group : [group];
+      for (const detail of details) {
+        if (typeof detail === "string") list.append(element("li", detail));
+        else if (detail && typeof detail === "object") {
+          const parish = detail.nazwa_parafii || detail.nazwa || "";
+          const confession = detail.wyznanie || "";
+          const text = [confession, parish].filter(Boolean).join(": ");
+          if (text) list.append(element("li", text));
+        }
+      }
+    } else if (field === "ludność_wyznanie") {
+      details = Array.isArray(group.struktura_wyznaniowa) ? group.struktura_wyznaniowa : [];
+      for (const detail of details) {
+        if (!detail || typeof detail !== "object") continue;
+        const denomination = detail.wyznanie_ocr || detail.wyznanie || "";
+        const count = detail.liczba;
+        const text = [denomination, count !== null && count !== undefined && count !== "" ? String(count) : ""]
+          .filter(Boolean).join(": ");
+        if (text) list.append(element("li", text));
+      }
+    } else {
+      details = Array.isArray(group.liczba) ? group.liczba : [group.liczba];
+      for (const detail of details) {
+        if (detail === null || detail === undefined || detail === "") continue;
+        if (typeof detail === "object") {
+          const number = detail.liczba;
+          if (number === null || number === undefined || number === "") continue;
+          const date = detail.data;
+          list.append(element("li", date ? `${date}: ${number}` : String(number)));
+        } else list.append(element("li", String(detail)));
+      }
+    }
+    if (list.children.length) section.append(list);
+    if (section.children.length) result.append(section);
+  }
+  return result.children.length ? result : null;
+}
 function renderEntry() {
   const entry = state.entry;
   setText($("entry-title"), entry.nazwa);
@@ -673,15 +724,27 @@ function renderEntry() {
   const isLocality = Array.isArray(localityType) ? localityType.length > 0 : Boolean(localityType);
   const labels = {
     ...(isLocality ? {typ_punktu_osadniczego: t("localityType")} : {typ: t("entryType")}),
+    warianty_nazw: t("nameVariants"),
     powiat_ujednolicony: t("district"), gmina: t("commune"), gubernia_ujednolicona: t("governorate"),
-    królestwo_polskie: t("kingdomOnly"), opis_lokalizacji: t("locationDescription"),
-    parafia_katolicka: t("catholicParish"), obiekty_sakralne: t("religiousSites"),
-    przemysłowe: t("industry"), młyny: t("mills"), archeo: t("archaeology"), warianty_nazw: t("nameVariants")
+    opis_lokalizacji: t("locationDescription"),
+    parafia_katolicka: t("catholicParish"), parafia_inna: t("otherParish"),
+    obiekty_sakralne: t("religiousSites"), przemysłowe: t("industry"), młyny: t("mills"),
+    archeo: t("archaeology"), królestwo_polskie: t("kingdomOnly"),
+    l_mk_statystyka: t("populationStatistics"),
+    l_dm_statystyka: t("dwellingStatistics"), ludność_wyznanie: t("religiousStructure")
   };
   $("entry-fields-list").replaceChildren();
   for (const [key, label] of Object.entries(labels)) {
     let value = entry.metadata[key];
     if (value === null || value === undefined || value === "" || (Array.isArray(value) && !value.length)) continue;
+    if (["parafia_inna", "l_mk_statystyka", "l_dm_statystyka", "ludność_wyznanie"].includes(key)) {
+      const formatted = structuredMetadataNode(key, value);
+      if (!formatted) continue;
+      const definition = element("dd");
+      definition.append(formatted);
+      $("entry-fields-list").append(element("dt", label), definition);
+      continue;
+    }
     if (key === "warianty_nazw") value = value.map(item => item.wariant_nazwy || "").filter(Boolean);
     if (Array.isArray(value)) value = value.map(item => typeof item === "object" ? JSON.stringify(item) : String(item)).join(", ");
     else if (typeof value === "boolean") value = value ? t("yes") : t("no");
