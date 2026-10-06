@@ -28,16 +28,6 @@ Uruchomienie aplikacji:
 venv/bin/python app.py
 ```
 
-Diagnostyczne oceny trafności wyników można włączyć w `.env`:
-
-```env
-SEARCH_SHOW_RANKING_SCORE=true
-```
-
-```bash
-venv/bin/python sgkp_enable_relevance_filter.py
-```
-
 
 ## Opis 
 
