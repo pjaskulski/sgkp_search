@@ -78,7 +78,7 @@ def lookup_db(path: Path) -> sqlite3.Connection:
 def settings(primary: str, with_vectors: bool, dimensions: int) -> dict:
     result = {
         "searchableAttributes": SEARCHABLE if primary == "ID" else ["nazwa", "text"],
-        "filterableAttributes": list(FILTER_FIELDS),
+        "filterableAttributes": list(FILTER_FIELDS) + (["entry_id"] if primary == "passage_id" else []),
         "faceting": {"maxValuesPerFacet": 2000},
         "pagination": {"maxTotalHits": 10000},
     }

@@ -5,6 +5,7 @@ import json
 import os
 import re
 import threading
+import time
 from datetime import datetime
 from functools import lru_cache
 from io import BytesIO
@@ -14,11 +15,14 @@ from flask import Flask, Response, jsonify, request, send_file, send_from_direct
 from sgkp_core import FILTER_FIELDS, iter_entries, passages
 from sgkp_pdf import MAX_EXPORT_BYTES, render_chat_pdf, validate_export_turns
 from sgkp_render import render_entry_markdown
+from sgkp_relevance import RelevanceDiagnostic
 from sgkp_services import Chat, Embeddings, Meili, OpenAIChat, ROOT, ServiceError, cached_volume, filter_expression, scan_url, source_detail
 
 app = Flask(__name__, static_folder="static")
 RUNTIME = Path(os.getenv("SGKP_RUNTIME_DIR", str(ROOT / "runtime")))
 DEFAULT_SEMANTIC_RATIO = 0.4
+SEARCH_RESULT_WINDOW = 2000
+SHOW_SEARCH_RANKING_SCORE = os.getenv("SEARCH_SHOW_RANKING_SCORE", "false").strip().lower() in {"1", "true", "yes", "on"}
 CHAT_SEMANTIC_RATIO = 1.0
 CHAT_SOURCE_LIMIT = 20
 CHAT_SEARCH_LIMIT = 50
@@ -690,14 +694,21 @@ def search_data(args: dict) -> dict:
             raise ValueError("Proporcja musi być między 0 a 1")
     page = bounded_int(args.get("page"), 1, 500)
     page_size = bounded_int(args.get("page_size"), 20, 50)
-    if (page - 1) * page_size >= 10000:
-        raise ValueError("Przekroczono limit 10 000 wyników wyszukiwarki")
+    offset = (page - 1) * page_size
+    if offset >= SEARCH_RESULT_WINDOW:
+        raise ValueError(f"Przekroczono limit {SEARCH_RESULT_WINDOW:,} wyników wyszukiwarki".replace(",", " "))
     expression = filters(args)
-    payload = {"q": search_query, "limit": page_size, "offset": (page - 1) * page_size,
+    payload = {"q": search_query, "limit": min(page_size, SEARCH_RESULT_WINDOW - offset), "offset": offset,
         "filter": expression, "attributesToCrop": ["text:40"], "attributesToHighlight": ["text"],
         "highlightPreTag": HIGHLIGHT_START, "highlightPostTag": HIGHLIGHT_END, "locales": ["pol"],
         "attributesToRetrieve": ["ID", "nazwa", "rodzaj", "tom", "strona", "parent_id", "nr", "typ_punktu_osadniczego", "powiat_ujednolicony"]}
+    if SHOW_SEARCH_RANKING_SCORE:
+        payload["showRankingScore"] = True
     vector = None
+    diagnostic = RelevanceDiagnostic()
+    diagnostic_active = diagnostic.enabled and mode != "text"
+    if diagnostic_active:
+        payload["attributesToRetrieve"] += ["text", "typ", "opis_lokalizacji", "przemysłowe", "młyny", "obiekty_sakralne", "archeo"]
     if mode != "text":
         if not config.get("vectors"):
             raise ServiceError("embedding", message="index_without_vectors")
@@ -711,6 +722,8 @@ def search_data(args: dict) -> dict:
         for hit in Meili().search(config["passages_index"], passage_query).get("hits", []):
             snippets.setdefault(hit["entry_id"], hit.get("text", "")[:250])
     hits = []
+    diagnostic_deadline = time.monotonic() + diagnostic.budget
+    diagnostic_failed = False
     keys = ("ID", "nazwa", "rodzaj", "tom", "strona", "parent_id", "nr", "typ_punktu_osadniczego", "powiat_ujednolicony")
     for hit in result.get("hits", []):
         summary = {key: hit[key] for key in keys if key in hit}
@@ -718,10 +731,47 @@ def search_data(args: dict) -> dict:
             snippets.get(hit["ID"]) or hit.get("_formatted", {}).get("text", ""))
         summary["metadata"] = {key: hit[key] for key in ("typ_punktu_osadniczego", "powiat_ujednolicony") if key in hit}
         summary["url_skanu"] = scan_url(hit.get("tom"), hit.get("strona"))
+        if SHOW_SEARCH_RANKING_SCORE and "_rankingScore" in hit:
+            summary["ranking_score"] = hit["_rankingScore"]
+        if diagnostic_active:
+            remaining = diagnostic_deadline - time.monotonic()
+            summary["relevance_diagnostic"] = {"status": "skipped_after_error" if diagnostic_failed else "budget_exceeded"}
+            if remaining > 0 and not diagnostic_failed:
+                try:
+                    diagnostic_stage = "fragmenty Meilisearch"
+                    evidence = hit.get("text", "")
+                    if len(evidence) > 2500:
+                        selected = Meili().search(config["passages_index"], {
+                            "q": search_query, "vector": vector,
+                            "hybrid": {"embedder": "jina", "semanticRatio": ratio},
+                            "filter": expression + ["entry_id = " + json.dumps(hit["ID"])],
+                            "limit": 2, "attributesToRetrieve": ["text"]})
+                        evidence = "\n\n".join(part.get("text", "") for part in selected.get("hits", []))
+                    remaining = diagnostic_deadline - time.monotonic()
+                    if remaining > 0:
+                        diagnostic_stage = "ocena Ollama"
+                        summary["relevance_diagnostic"] = diagnostic.assess(
+                            search_query, hit, evidence, config["entries_index"],
+                            timeout=min(diagnostic.timeout, remaining))
+                except Exception as exc:
+                    diagnostic_failed = True
+                    error_type = type(exc).__name__
+                    http_status = getattr(exc, "status_code", None) or getattr(exc, "status", None)
+                    service = getattr(exc, "service", "tev1")
+                    error_code = exc.message if isinstance(exc, ServiceError) else error_type
+                    summary["relevance_diagnostic"] = {"status": "unavailable", "error_type": error_type,
+                                                       "http_status": http_status, "service": service,
+                                                       "error_code": error_code}
+                    app.logger.warning(
+                        "Diagnostyka trafności tev1 niedostępna: %s, usługa=%s, kod=%s, etap=%s, HTTP=%s, ID=%s, model=%s, timeout_s=%.2f",
+                        error_type, service, error_code, diagnostic_stage, http_status,
+                        hit["ID"], diagnostic.model, min(diagnostic.timeout, remaining))
         hits.append(summary)
     estimated = result.get("estimatedTotalHits", len(hits))
     return {"hits": hits, "estimated_total_hits": estimated, "page": page, "page_size": page_size,
-        "has_next": page * page_size < min(estimated, 10000) and bool(hits), "mode": mode, "processing_time_ms": result.get("processingTimeMs")}
+        "has_next": offset + len(hits) < min(estimated, SEARCH_RESULT_WINDOW) and bool(hits),
+        "max_result_window": SEARCH_RESULT_WINDOW, "mode": mode, "show_ranking_score": SHOW_SEARCH_RANKING_SCORE,
+        "processing_time_ms": result.get("processingTimeMs")}
 
 
 @app.errorhandler(ValueError)
@@ -1237,6 +1287,7 @@ def log_model_configuration():
     local = Chat()
     fallback = OpenAIChat()
     embeddings = Embeddings()
+    diagnostic = RelevanceDiagnostic()
     if local.enable_thinking:
         effort = local.reasoning_effort or "domyślny serwera"
         thinking = "włączony"
@@ -1247,6 +1298,9 @@ def log_model_configuration():
     print(
         "[SGKP] Parametry wywołań modeli:\n"
         f"  Diagnostyka wywołań Qwena: {'włączona' if local.debug else 'wyłączona'}\n"
+        f"  Oceny trafności wyszukiwania: {'włączone' if SHOW_SEARCH_RANKING_SCORE else 'wyłączone'}\n"
+        f"  Diagnostyka tev1: {'włączona' if diagnostic.enabled else 'wyłączona'}, "
+        f"model={diagnostic.model}, próg={diagnostic.threshold}, budżet_s={diagnostic.budget}\n"
         f"  Qwen: model={local.model}, thinking={thinking}, reasoning_effort={effort}, "
         f"temperature={local.temperature}, max_output_tokens={local.max_output_tokens} "
         f"(ponowienie: {local.max_output_tokens * 2})\n"

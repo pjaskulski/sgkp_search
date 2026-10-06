@@ -124,6 +124,9 @@ class Embeddings:
         self.jina_url = os.getenv("JINA_EMBEDDING_ENDPOINT", "https://api.jina.ai/v1/embeddings")
         self.jina_model = os.getenv("JINA_EMBEDDING_MODEL", "jina-embeddings-v3")
         self.jina_task = os.getenv("JINA_EMBEDDING_TASK", "text-matching")
+        self.preferred_provider = os.getenv("EMBEDDING_PREFERRED_PROVIDER", "local").strip().lower()
+        if self.preferred_provider not in {"local", "jina"}:
+            raise ValueError("EMBEDDING_PREFERRED_PROVIDER must be local or jina")
         self.dimensions = int(os.getenv("EMBEDDING_DIMENSIONS", "1024"))
         self.session = requests.Session()
 
@@ -157,35 +160,38 @@ class Embeddings:
             raise ServiceError("embedding", message=f"jina_{type(exc).__name__}") from exc
         return self._parse_vectors(response, texts)
 
-    def embed(self, texts: list[str]) -> list[list[float]]:
-        primary_error = None
-        if self.key:
-            try:
-                response = self.session.post(self.url, json={"model": self.model, "input": texts},
-                    headers={"Authorization": f"Bearer {self.key}"}, timeout=(10, 120))
-                return self._parse_vectors(response, texts)
-            except requests.RequestException as exc:
-                primary_error = ServiceError("embedding", message=type(exc).__name__)
-            except ServiceError as exc:
-                primary_error = exc
-        else:
-            primary_error = ServiceError("embedding", message="missing AI_TEST_KEY")
-
-        if not self.jina_key:
-            raise primary_error
+    def _embed_local(self, texts: list[str]) -> list[list[float]]:
+        if not self.key:
+            raise ServiceError("embedding", message="missing AI_TEST_KEY")
         try:
-            vectors = self._embed_jina(texts)
-        except ServiceError as fallback_error:
+            response = self.session.post(self.url,
+                json={"model": self.model, "task": self.jina_task, "input": texts},
+                headers={"Authorization": f"Bearer {self.key}"}, timeout=(10, 120))
+        except requests.RequestException as exc:
+            raise ServiceError("embedding", message=type(exc).__name__) from exc
+        return self._parse_vectors(response, texts)
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        providers = {"local": (self._embed_local, self.key),
+                     "jina": (self._embed_jina, self.jina_key)}
+        primary = self.preferred_provider
+        secondary = "jina" if primary == "local" else "local"
+        try:
+            return providers[primary][0](texts)
+        except ServiceError as primary_error:
+            if not providers[secondary][1]:
+                raise
+            try:
+                vectors = providers[secondary][0](texts)
+            except ServiceError as fallback_error:
+                logging.getLogger(__name__).warning(
+                    "Embedding: dostawca %s niedostępny (%s); fallback %s nie powiódł się (%s).",
+                    primary, primary_error.message, secondary, fallback_error.message)
+                raise fallback_error from primary_error
             logging.getLogger(__name__).warning(
-                "Lokalna usługa embeddings jest niedostępna, a fallback Jina API nie powiódł się: %s",
-                fallback_error.message,
-            )
-            raise fallback_error from primary_error
-        logging.getLogger(__name__).warning(
-            "Lokalna usługa embeddings jest niedostępna (%s); użyto fallbacku Jina API.",
-            primary_error.message,
-        )
-        return vectors
+                "Embedding: dostawca %s niedostępny (%s); użyto fallbacku %s.",
+                primary, primary_error.message, secondary)
+            return vectors
 
 
 class Chat:

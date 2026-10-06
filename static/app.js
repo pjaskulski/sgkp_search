@@ -49,7 +49,15 @@ const UI_COPY = {
     populationStatistics: "Liczba mieszkańców", dwellingStatistics: "Liczba domów", religiousStructure: "Struktura wyznaniowa",
     industry: "Przemysł", mills: "Młyny", archaeology: "Archeologia", nameVariants: "Warianty nazw",
     yes: "Tak", no: "Nie", collectiveEntry: "Hasło zbiorcze: {name}", openCollective: "Otwórz hasło zbiorcze",
-    searching: "Wyszukiwanie…", resultsRange: "Wyniki {start}–{end} · około {total} trafień", noResults: "Brak wyników",
+    searching: "Wyszukiwanie…", rankingScore: "Ocena trafności",
+    relevanceKeep: "tev1: zachowałby wynik", relevanceReject: "tev1: odrzuciłby wynik",
+    relevanceUnavailable: "tev1: ocena niedostępna", relevanceBudget: "tev1: pominięto — limit czasu",
+    relevanceSkippedError: "tev1: pominięto po błędzie wcześniejszej oceny",
+    relevanceEvidence: "Fragment oceniony przez tev1 (diagnostyka)",
+    relevanceTime: "czas wywołania: {seconds} s", relevanceCached: "ocena z pamięci",
+    resultsRange: "Wyniki {start}–{end} · około {total} trafień",
+    resultsRangeLimited: "Wyniki {start}–{end} · można przeglądać maksymalnie pierwsze {limit} wyników",
+    noResults: "Brak wyników",
     notFoundTitle: "Nie znaleziono haseł", noResultsAdvice: "Zmień słowa zapytania albo ograniczenia w panelu filtrów.",
     searchFailedTitle: "Nie można wyświetlić wyników", serviceRetry: "Sprawdź połączenie z usługą i spróbuj ponownie.",
     resultPage: "Strona {page}", volumePage: "Tom {volume} · s. {page}", volumePart1: "cz. 1", volumePart2: "cz. 2", districtPrefix: "Powiat {name}",
@@ -69,6 +77,9 @@ const UI_COPY = {
     entryId: "ID: {id} · tom {volume}, s. {page}{number}", entryNumber: " · element nr {number}",
     entryScanAria: "Otwórz skan strony", answerLabel: "Odpowiedź", filtersActive: "Filtry źródeł: {count}",
     serviceUnavailable: "Usługa jest niedostępna", badServerResponse: "Nieprawidłowa odpowiedź serwera",
+    http503: "Usługa jest chwilowo niedostępna (HTTP 503). Spróbuj ponownie za chwilę.",
+    http502: "Serwer pośredniczący nie otrzymał poprawnej odpowiedzi aplikacji (HTTP 502). Spróbuj ponownie.",
+    http504: "Przekroczono czas oczekiwania na odpowiedź aplikacji (HTTP 504). Spróbuj ponownie.",
     conversationServiceUnavailable: "Usługa konwersacji jest niedostępna", noResponseStream: "Brak strumienia odpowiedzi",
     responseInterrupted: "Odpowiedź została przerwana", couldNotPreparePdf: "Nie udało się przygotować PDF",
     sourceFallback: "Źródło"
@@ -115,7 +126,15 @@ const UI_COPY = {
     populationStatistics: "Population", dwellingStatistics: "Number of houses", religiousStructure: "Religious composition",
     industry: "Industry", mills: "Mills", archaeology: "Archaeology", nameVariants: "Name variants",
     yes: "Yes", no: "No", collectiveEntry: "Collective entry: {name}", openCollective: "Open collective entry",
-    searching: "Searching…", resultsRange: "Results {start}–{end} · about {total} hits", noResults: "No results",
+    searching: "Searching…", rankingScore: "Relevance score",
+    relevanceKeep: "tev1: would keep", relevanceReject: "tev1: would reject",
+    relevanceUnavailable: "tev1: assessment unavailable", relevanceBudget: "tev1: skipped — time limit",
+    relevanceSkippedError: "tev1: skipped after an earlier assessment failed",
+    relevanceEvidence: "Passage assessed by tev1 (diagnostic)",
+    relevanceTime: "request time: {seconds} s", relevanceCached: "cached assessment",
+    resultsRange: "Results {start}–{end} · about {total} hits",
+    resultsRangeLimited: "Results {start}–{end} · browsing is limited to the first {limit} results",
+    noResults: "No results",
     notFoundTitle: "No entries found", noResultsAdvice: "Try different search terms or change the filters.",
     searchFailedTitle: "Search results are unavailable", serviceRetry: "Check the service connection and try again.",
     resultPage: "Page {page}", volumePage: "Vol. {volume} · p. {page}", volumePart1: "pt. 1", volumePart2: "pt. 2", districtPrefix: "District {name}",
@@ -135,6 +154,9 @@ const UI_COPY = {
     entryId: "ID: {id} · vol. {volume}, p. {page}{number}", entryNumber: " · item {number}",
     entryScanAria: "Open page scan", answerLabel: "Answer", filtersActive: "Source filters: {count}",
     serviceUnavailable: "The service is unavailable", badServerResponse: "Invalid server response",
+    http503: "The service is temporarily unavailable (HTTP 503). Please try again shortly.",
+    http502: "The gateway did not receive a valid application response (HTTP 502). Please try again.",
+    http504: "The gateway timed out waiting for the application (HTTP 504). Please try again.",
     conversationServiceUnavailable: "The conversation service is unavailable", noResponseStream: "No response stream was received",
     responseInterrupted: "The response was interrupted", couldNotPreparePdf: "Could not prepare the PDF",
     sourceFallback: "Source"
@@ -250,12 +272,20 @@ function externalLink(label, url) {
   node.rel = "noopener noreferrer";
   return node;
 }
+async function responseError(response, fallbackKey = "serviceUnavailable") {
+  try {
+    const data = await response.json();
+    if (typeof data?.error === "string" && data.error.trim()) return translatedError(data.error, fallbackKey);
+  } catch { /* Gateways can return HTML or an empty body for HTTP errors. */ }
+  if ([502, 503, 504].includes(response.status)) return t("http" + response.status);
+  return `${t(fallbackKey)} (HTTP ${response.status})`;
+}
 async function api(url, options) {
   const response = await fetch(url, options);
+  if (!response.ok) throw new Error(await responseError(response));
   let data;
   try { data = await response.json(); }
   catch { throw new Error(t("badServerResponse")); }
-  if (!response.ok) throw new Error(translatedError(data.error, "serviceUnavailable"));
   return data;
 }
 function selectedMode() { return document.querySelector('input[name="mode"]:checked').value; }
@@ -357,6 +387,12 @@ function resultCard(hit) {
   card.append(title);
   const meta = element("div", undefined, "result-meta");
   meta.append(element("span", t("volumePage", {volume: displayVolume(hit.tom), page: hit.strona || "—"})));
+  if (Number.isFinite(Number(hit.ranking_score))) {
+    const score = Number(hit.ranking_score).toLocaleString(currentLanguage === "en" ? "en" : "pl-PL", {
+      minimumFractionDigits: 3, maximumFractionDigits: 3,
+    });
+    meta.append(element("span", `${t("rankingScore")}: ${score}`));
+  }
   if (hit.powiat_ujednolicony) meta.append(element("span", t("districtPrefix", {name: hit.powiat_ujednolicony})));
   if (hit.parent_id) meta.append(element("span", t("collectiveItem", {number: hit.nr ? " · " + hit.nr : ""})));
   if (hit.url_skanu) meta.append(externalLink(t("scanPage"), hit.url_skanu));
@@ -368,6 +404,26 @@ function resultCard(hit) {
     card.append(tags);
   }
   if (hit.snippet) card.append(snippetNode(hit));
+  if (hit.relevance_diagnostic) {
+    const diagnostic = hit.relevance_diagnostic;
+    const label = diagnostic.status === "ok" ?
+      `${t(diagnostic.would_reject ? "relevanceReject" : "relevanceKeep")} · ${Number(diagnostic.score).toFixed(3)}` :
+      t(diagnostic.status === "budget_exceeded" ? "relevanceBudget" :
+        diagnostic.status === "skipped_after_error" ? "relevanceSkippedError" : "relevanceUnavailable");
+    const error = diagnostic.error_type ? ` (${diagnostic.error_type}${diagnostic.http_status ? ", HTTP " + diagnostic.http_status : ""})` : "";
+    const timing = Number.isFinite(diagnostic.decision_seconds) ? " · " + t("relevanceTime", {
+      seconds: diagnostic.decision_seconds.toLocaleString(currentLanguage === "en" ? "en" : "pl-PL", {
+        minimumFractionDigits: 2, maximumFractionDigits: 2,
+      }),
+    }) : "";
+    const cached = diagnostic.cache_hit ? " · " + t("relevanceCached") : "";
+    card.append(element("p", label + error + timing + cached, "field-hint"));
+    if (diagnostic.evidence) {
+      const details = element("details");
+      details.append(element("summary", t("relevanceEvidence")), element("p", diagnostic.evidence));
+      card.append(details);
+    }
+  }
   return card;
 }
 function browseGridCard(hit) {
@@ -409,7 +465,12 @@ function renderSearchResults(data) {
   if (data.hits.length) {
     const start = (data.page - 1) * data.page_size + 1;
     const end = start + data.hits.length - 1;
-    setText($("status"), t("resultsRange", {start, end, total: data.estimated_total_hits}));
+    const beyondWindow = Number(data.estimated_total_hits) > Number(data.max_result_window);
+    if (data.mode === "semantic" && beyondWindow) {
+      setText($("status"), t("resultsRangeLimited", {start, end, limit: Number(data.max_result_window).toLocaleString(currentLanguage === "en" ? "en" : "pl-PL")}));
+    } else {
+      setText($("status"), t("resultsRange", {start, end, total: data.estimated_total_hits}));
+    }
     for (const hit of data.hits) $("results").append(resultCard(hit));
     $("pagination").hidden = false;
   } else {
@@ -842,9 +903,7 @@ async function askChat(question, filters, history, answerNode, sourcesNode, stat
       body: JSON.stringify({question, filters, history, language: currentLanguage}), signal
     });
     if (!response.ok) {
-      let data = {};
-      try { data = await response.json(); } catch {}
-      throw new Error(translatedError(data.error, "conversationServiceUnavailable"));
+      throw new Error(await responseError(response, "conversationServiceUnavailable"));
     }
     if (!response.body) throw new Error(t("noStream"));
     const reader = response.body.getReader();
@@ -957,9 +1016,7 @@ async function exportChatPdf() {
       body: JSON.stringify({turns: state.exportTurns})
     });
     if (!response.ok) {
-      let data = {};
-      try { data = await response.json(); } catch {}
-      throw new Error(translatedError(data.error, "couldNotPreparePdf"));
+      throw new Error(await responseError(response, "couldNotPreparePdf"));
     }
     const blob = await response.blob();
     const name = response.headers.get("Content-Disposition")?.match(/filename="?([\w.-]+)"?/)?.[1]

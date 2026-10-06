@@ -1,7 +1,8 @@
 # Wyszukiwarka SGKP
 
 Aplikacja Flask / Meilisearch. Służy do wyszukiwania pełnotekstowego, semantycznego i konwersacyjnego w Słowniku Geograficznym Królestwa Polskiego.
-Przygotowana z udziałem Codex (gpt-6-sol).
+Przygotowana z udziałem Codex.
+
 
 ## Uruchomienie
 
@@ -27,7 +28,17 @@ Uruchomienie aplikacji:
 venv/bin/python app.py
 ```
 
+Diagnostyczne oceny trafności wyników można włączyć w `.env`:
+
+```env
+SEARCH_SHOW_RANKING_SCORE=true
+```
+
+```bash
+venv/bin/python sgkp_enable_relevance_filter.py
+```
+
 
 ## Opis 
 
-Interfejs ma dwie zakładki: **Wyszukiwanie** z wynikami i **Konwersacja** z odpowiedziami opartymi na cytowanych hasłach. Opis aplikacji i wskazówki znajdują się w oknie **Pomoc** w nagłówku. W obu widokach dostępny jest ten sam zestaw filtrów. Po wybraniu „Tylko miejscowości” odblokowują się pola: „Tylko Królestwo Polskie”, typ miejscowości, gubernia i gmina. Gminę wybiera się z listy po wpisaniu fragmentu nazwy. 
+Interfejs ma trzy zakładki: **Wyszukiwanie** z wynikami, **Konwersacja** z odpowiedziami opartymi na cytowanych hasłach oraz **Przeglądanie** gdzie można ręcznie przeglądać hasła słownika. Opis aplikacji i wskazówki znajdują się w oknie **Pomoc** w nagłówku. W obu widokach dostępny jest ten sam zestaw filtrów. Po wybraniu „Tylko miejscowości” odblokowują się pola: „Tylko Królestwo Polskie”, typ miejscowości, gubernia i gmina. Gminę wybiera się z listy po wpisaniu fragmentu nazwy. 

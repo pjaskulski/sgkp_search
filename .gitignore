@@ -216,3 +216,5 @@ SGKP_search_specyfikacja.md
 /json/*
 !/json/.gitkeep
 notatki.txt
+notatki.md
+json_poprawki/
