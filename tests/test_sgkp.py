@@ -84,6 +84,8 @@ class ApiTests(unittest.TestCase):
             "source_dir": "/tmp", "lookup_db": "/tmp/lookup.sqlite",
         })
         self.manifest_patch.start()
+        self.district_patch = patch.object(web, "model_question_district", return_value=None)
+        self.district_patch.start()
         self.subjects_patch = patch.object(web, "model_named_subjects",
                                            side_effect=web.names_in_question)
         self.subjects_patch.start()
@@ -98,6 +100,7 @@ class ApiTests(unittest.TestCase):
         self.selection_patch.start()
 
     def tearDown(self):
+        self.district_patch.stop()
         self.selection_patch.stop()
         self.metadata_plan_patch.stop()
         self.subjects_patch.stop()
@@ -290,6 +293,70 @@ class ApiTests(unittest.TestCase):
         ]})):
             self.assertEqual(web.model_metadata_searches("Gdzie znajdowały się młyny?"),
                              [("młyny", "młyn wodny")])
+
+    def test_district_model_accepts_only_existing_value_and_fails_open(self):
+        self.district_patch.stop()
+        with patch.object(web, "cached_filter_options", return_value={
+                "powiat_ujednolicony": ["warszawski", "wileński"]}), \
+             patch.object(web, "preliminary_chat_answer", side_effect=[
+                 '{"district":"warszawski"}', '{"district":"nieznany"}',
+                 '{"district":null}', 'invalid JSON',
+                 ServiceError("chat", message="timeout")]):
+            config = {"source_dir": "/tmp"}
+            self.assertEqual(web.model_question_district("W powiecie warszawskim", config), "warszawski")
+            for _ in range(4):
+                self.assertIsNone(web.model_question_district("Pytanie", config))
+
+    def test_archeo_available_to_planner_and_source_prompt(self):
+        self.metadata_plan_patch.stop()
+        with patch.object(web, "preliminary_chat_answer", return_value=
+                          '{"searches":[{"field":"archeo","q":"wykopaliska"}]}'):
+            self.assertEqual(web.model_metadata_searches("Jakie były znaleziska?"),
+                             [("archeo", "wykopaliska")])
+        self.assertIn("informacje archeologiczne: kurhany",
+                      web.source_metadata_text({"archeo": ["kurhany"]}))
+
+    def test_batch_selections_are_retained_when_they_fit_limit(self):
+        self.selection_patch.stop()
+        candidates = [{"passage_id": f"entry{i}_p0001", "entry_id": f"entry{i}",
+                       "text": "Opis znalezisk " * 20} for i in range(2)]
+        with patch.object(web, "CHAT_SELECTION_BATCH_CHARS", 300), \
+             patch.object(web, "preliminary_chat_answer", side_effect=[
+                 '{"passage_ids":["entry0_p0001"]}',
+                 '{"passage_ids":["entry1_p0001"]}']) as model:
+            selected = web.select_relevant_passages("Jakie znaleziska?", candidates, [],
+                                                     limit=20, force=True)
+        self.assertEqual(len(selected), 2)
+        self.assertEqual(model.call_count, 2)
+
+    def test_empty_merge_preserves_previously_selected_evidence(self):
+        self.selection_patch.stop()
+        candidates = [{"passage_id": f"entry{i}_p0001", "entry_id": f"entry{i}",
+                       "text": "Opis znalezisk " * 20} for i in range(2)]
+        with patch.object(web, "CHAT_SELECTION_BATCH_CHARS", 300), \
+             patch.object(web, "preliminary_chat_answer", side_effect=[
+                 '{"passage_ids":["entry0_p0001"]}',
+                 '{"passage_ids":["entry1_p0001"]}', '{"passage_ids":[]}']):
+            selected = web.select_relevant_passages("Jakie znaleziska?", candidates, [],
+                                                     limit=1, force=True)
+        self.assertEqual(len(selected), 1)
+
+    def test_question_district_filters_retrieval_and_preserves_manual_filter(self):
+        with patch.object(web, "model_question_district", return_value="warszawski") as district, \
+             patch.object(web.Meili, "search", return_value={"hits": []}) as search:
+            response = self.client.post("/api/v1/chat", json={
+                "question": "Jakie znaleziska były w powiecie warszawskim?"})
+            self.assertEqual(response.status_code, 200)
+            self.assertIn('powiat_ujednolicony = "warszawski"',
+                          search.call_args.args[1]["filter"])
+            district.reset_mock()
+            response = self.client.post("/api/v1/chat", json={
+                "question": "Jakie znaleziska były w powiecie warszawskim?",
+                "filters": {"powiat_ujednolicony": "wileński"}})
+            self.assertEqual(response.status_code, 200)
+            district.assert_not_called()
+            self.assertIn('powiat_ujednolicony = "wileński"',
+                          search.call_args.args[1]["filter"])
 
     def test_followup_uses_previously_cited_passages_as_current_evidence(self):
         busk = {"passage_id": "01-00001_p0001", "entry_id": "01-00001", "nazwa": "Busk",

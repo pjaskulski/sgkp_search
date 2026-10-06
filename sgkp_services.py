@@ -206,7 +206,7 @@ class Chat:
         if preliminary:
             self.enable_thinking = False
             self.reasoning_effort = ""
-            self.temperature = 0.7
+            self.temperature = float(os.getenv("QWEN_PRELIMINARY_TEMPERATURE", "0.3"))
         else:
             thinking = os.getenv("QWEN_ENABLE_THINKING", "false").strip().lower()
             if thinking not in {"true", "false", "1", "0", "yes", "no", "on", "off"}:

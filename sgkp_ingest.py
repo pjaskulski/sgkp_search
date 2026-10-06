@@ -19,7 +19,7 @@ from sgkp_services import Embeddings, Meili, ROOT, ServiceError
 
 
 RULE_VERSION = "2026-09-25-v1"
-SEARCHABLE = ["ID", "nazwa", "warianty_nazw_text", "typ", "opis_lokalizacji", "powiat_ujednolicony", "gmina", "gubernia_ujednolicona", "obiekty_sakralne", "przemysłowe", "młyny", "text"]
+SEARCHABLE = ["ID", "nazwa", "warianty_nazw_text", "typ", "opis_lokalizacji", "powiat_ujednolicony", "gmina", "gubernia_ujednolicona", "obiekty_sakralne", "przemysłowe", "młyny", "archeo", "text"]
 
 
 class EmbeddingCache:
