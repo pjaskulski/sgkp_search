@@ -55,6 +55,10 @@
             <input id="ratio" type="range" min="10" max="90" value="40">
             <output id="ratio-value">40%</output>
           </label>
+          <label id="verify-line" class="verify-line" hidden>
+            <span><input id="verify-results" type="checkbox" checked> <span data-i18n="verifyResults">Dodatkowa weryfikacja wyników</span></span>
+            <small data-i18n="verifyHint">Uwaga: wydłuża wyszukiwanie</small>
+          </label>
         </div>
       </form>
 
@@ -126,6 +130,9 @@
         <summary><span id="assistant-filter-label" data-i18n="sourceFilters">Filtry źródeł</span> <span id="assistant-filter-hint">Ogranicz zakres odpowiedzi</span></summary>
         <div id="assistant-filter-slot"></div>
       </details>
+      <label class="verify-line">
+        <span><input id="chat-verify-results" type="checkbox" checked> <span data-i18n="verifyResults">Dodatkowa weryfikacja wyników</span> <small data-i18n="chatVerifyHint">(Uwaga: wydłuża przygotowanie odpowiedzi)</small></span>
+      </label>
       <div id="chat-intro" class="chat-intro">
         <p class="eyebrow" data-i18n="exampleQuestions">Przykładowe pytania</p>
         <div class="suggestions">

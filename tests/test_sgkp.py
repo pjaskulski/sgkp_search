@@ -92,11 +92,8 @@ class ApiTests(unittest.TestCase):
         self.metadata_plan_patch = patch.object(web, "model_metadata_searches", return_value=[])
         self.metadata_plan_patch.start()
         self.selection_patch = patch.object(
-            web, "select_relevant_passages",
-            side_effect=lambda _question, candidates, _history, limit=web.CHAT_SOURCE_LIMIT,
-                               force=False, per_batch_limit=web.CHAT_SELECTION_PER_BATCH,
-                               description_only=False:
-                               candidates[:limit])
+            web.ChatPassageVerifier, "select",
+            side_effect=lambda candidates, limit=web.CHAT_SOURCE_LIMIT, **kwargs: candidates[:limit])
         self.selection_patch.start()
 
     def tearDown(self):
@@ -233,26 +230,27 @@ class ApiTests(unittest.TestCase):
         self.assertIn("posiada młyn wodny", web.descriptive_source_text(direct))
 
         with patch.object(web.Meili, "search", return_value={"hits": [misleading, direct]}), \
-             patch.object(web.Chat, "answer", side_effect=[
-                 json.dumps({"passage_ids": [direct["passage_id"]]}),
-                 "Młyn znajdował się w Innej wsi [1]."]) as answer:
+             patch.object(web.RelevanceDiagnostic, "assess", side_effect=lambda q, hit, *a, **kw:
+                 {"score": 0.9 if hit["passage_id"] == direct["passage_id"] else 0.1,
+                  "would_reject": hit["passage_id"] != direct["passage_id"]}), \
+             patch.object(web.Chat, "answer", return_value="Młyn znajdował się w Innej wsi [1].") as answer:
             response = self.client.post("/api/v1/chat", json={
                 "question": "Gdzie znajdowały się młyny?", "diagnostics": True})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json["retrieved_passage_ids"], [direct["passage_id"]])
-        selection_prompt = answer.call_args_list[0].args[0][1]["content"]
-        self.assertNotIn("Zielony Młyn", selection_prompt)
-        self.assertIn("posiada młyn wodny", selection_prompt)
+        self.assertEqual(answer.call_count, 1)
+        self.assertIn("posiada młyn wodny", answer.call_args.args[0][1]["content"])
         self.assertEqual(response.json["sources"][0]["entry_id"], direct["entry_id"])
 
         with patch.object(web.Meili, "search", return_value={"hits": [misleading]}), \
-             patch.object(web.Chat, "answer", return_value='{"passage_ids": []}') as answer:
+             patch.object(web.RelevanceDiagnostic, "assess", return_value={"score": 0.1, "would_reject": True}), \
+             patch.object(web.Chat, "answer") as answer:
             response = self.client.post("/api/v1/chat", json={
                 "question": "Gdzie znajdowały się młyny?"})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json["sources"], [])
         self.assertIn("nie pozwalają odpowiedzieć", response.json["answer"])
-        self.assertEqual(answer.call_count, 1)
+        answer.assert_not_called()
 
     def test_metadata_search_supplements_semantic_passages_with_citable_entry(self):
         self.metadata_plan_patch.stop()
@@ -479,9 +477,11 @@ class ApiTests(unittest.TestCase):
         relevant = next(chunk for chunk in chunks if "zabijające gazy" in chunk["text"])
         with patch.object(web, "source_detail", return_value={"entry": entry, "tom": "01", "strona": 332}), \
              patch.object(web.Meili, "search", return_value={"hits": []}) as search, \
+             patch.object(web.RelevanceDiagnostic, "assess", side_effect=lambda q, hit, *a, **kw:
+                 {"score": 0.9 if hit["passage_id"] == relevant["passage_id"] else 0.1,
+                  "would_reject": hit["passage_id"] != relevant["passage_id"]}), \
              patch.object(web.Chat, "answer", side_effect=[
-                 "TAK", json.dumps({"passage_ids": [relevant["passage_id"]]}),
-                 "Tak, wydobywające się gazy były niebezpieczne [1]."]) as answer:
+                 "TAK", "Tak, wydobywające się gazy były niebezpieczne [1]."]) as answer:
             response = self.client.post("/api/v1/chat", json={
                 "question": "Czy praca stwarzała tam zagrożenia dla robotników?",
                 "history": history, "diagnostics": True})
@@ -511,9 +511,11 @@ class ApiTests(unittest.TestCase):
                     .get(payload["q"], unrelated)}
 
         with patch.object(web.Meili, "search", side_effect=search_result), \
-             patch.object(web.Chat, "answer", side_effect=[
-                 json.dumps({"passage_ids": ["13-00002_p0002"]}),
-                 "Zakład korzystał z ciepłych źródeł siarczanych [1]."]) as answer:
+             patch.object(web.RelevanceDiagnostic, "assess", side_effect=lambda q, hit, *a, **kw:
+                 {"score": 0.9 if hit["passage_id"] == "13-00002_p0002" else 0.1,
+                  "would_reject": hit["passage_id"] != "13-00002_p0002"}), \
+             patch.object(web.Chat, "answer", return_value=
+                 "Zakład korzystał z ciepłych źródeł siarczanych [1].") as answer:
             response = self.client.post("/api/v1/chat", json={
                 "question": "Czym wyróżniał się zakład kąpielowy w Warmbrunn?",
                 "diagnostics": True})

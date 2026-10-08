@@ -15,7 +15,7 @@ from flask import Flask, Response, jsonify, request, send_file, send_from_direct
 from sgkp_core import FILTER_FIELDS, iter_entries, passages
 from sgkp_pdf import MAX_EXPORT_BYTES, render_chat_pdf, validate_export_turns
 from sgkp_render import render_entry_markdown
-from sgkp_relevance import RelevanceDiagnostic
+from sgkp_relevance import RelevanceDiagnostic, write_search_csv
 from sgkp_services import Chat, Embeddings, Meili, OpenAIChat, ROOT, ServiceError, cached_volume, filter_expression, scan_url, source_detail
 
 app = Flask(__name__, static_folder="static")
@@ -701,6 +701,62 @@ def select_relevant_passages(question: str, candidates: list[dict], history: lis
     return finalists[:limit]
 
 
+class ChatPassageVerifier:
+    """One decision-model budget and assessment cache per conversation request."""
+
+    def __init__(self, question, history, index, enabled):
+        self.enabled = enabled
+        self.index = index
+        self.query = question
+        if history:
+            self.query = ("Kontekst rozmowy (służy do interpretacji pytania):\n"
+                          + history_for_prompt(history)[-4000:]
+                          + "\n\nBieżące pytanie: " + question)
+        self.engine = RelevanceDiagnostic() if enabled else None
+        self.deadline = None
+        self.assessments = {}
+        self.incomplete = False
+
+    def select(self, candidates, limit=CHAT_SOURCE_LIMIT, **_options):
+        unique = {item["passage_id"]: item for item in candidates if item.get("passage_id")}
+        ordered = interleave_entries(list(unique.values()))
+        if not self.enabled:
+            return ordered[:limit]
+        if self.deadline is None:
+            self.deadline = time.monotonic() + self.engine.budget
+        accepted, counts = [], {}
+        for source in ordered:
+            entry = source["entry_id"]
+            if counts.get(entry, 0) >= CHAT_PASSAGES_PER_ENTRY:
+                continue
+            identifier = source["passage_id"]
+            assessment = self.assessments.get(identifier)
+            if assessment is None:
+                remaining = self.deadline - time.monotonic()
+                if remaining <= 0:
+                    self.incomplete = True
+                    break
+                try:
+                    assessment = self.engine.assess(
+                        self.query, source, source.get("text") or "", self.index,
+                        timeout=min(self.engine.timeout, remaining))
+                except Exception as exc:
+                    app.logger.warning("Weryfikacja fragmentów Konwersacji niedostępna: %s", type(exc).__name__)
+                    raise ServiceError("relevance", message=type(exc).__name__) from exc
+                self.assessments[identifier] = assessment
+                log_chat_decision("weryfikacja fragmentu przez model decyzyjny",
+                                  passage_id=identifier, model=self.engine.model,
+                                  score=assessment["score"], odrzucony=assessment["would_reject"],
+                                  czas_s=assessment.get("decision_seconds"),
+                                  pamiec=assessment.get("cache_hit"))
+            if not assessment["would_reject"]:
+                accepted.append(source)
+                counts[entry] = counts.get(entry, 0) + 1
+                if len(accepted) >= limit:
+                    break
+        return accepted
+
+
 def snippet_with_highlights(formatted: str, limit: int = 300) -> tuple[str, list[list[int]]]:
     """Turn Meilisearch markers into plain text and Unicode character ranges."""
     parts: list[str] = []
@@ -758,7 +814,19 @@ def search_data(args: dict) -> dict:
         payload["showRankingScore"] = True
     vector = None
     diagnostic = RelevanceDiagnostic()
-    diagnostic_active = diagnostic.enabled and mode != "text"
+    verify = str(args.get("verify", "true")).strip().lower()
+    if verify not in {"true", "false", "1", "0"}:
+        raise ValueError("Nieprawidłowa wartość weryfikacji wyników")
+    diagnostic_active = diagnostic.enabled and mode == "semantic" and verify in {"true", "1"}
+    filtering = diagnostic_active and diagnostic.mode == "filter"
+    if filtering:
+        try:
+            candidate_offset = int(args.get("candidate_offset", offset))
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Nieprawidłowa pozycja wyników") from exc
+        if not 0 <= candidate_offset < SEARCH_RESULT_WINDOW:
+            raise ValueError("Pozycja wyników poza zakresem")
+        payload["offset"] = candidate_offset
     if diagnostic_active:
         payload["attributesToRetrieve"] += ["text", "typ", "opis_lokalizacji", "przemysłowe", "młyny", "obiekty_sakralne", "archeo"]
     if mode != "text":
@@ -776,8 +844,36 @@ def search_data(args: dict) -> dict:
     hits = []
     diagnostic_deadline = time.monotonic() + diagnostic.budget
     diagnostic_failed = False
+    progress = {"offset": payload["offset"], "exhausted": False, "timed_out": False}
+
+    def candidates():
+        batch = result
+        while True:
+            rows = batch.get("hits", [])
+            for candidate in rows:
+                if filtering and (len(hits) >= page_size or diagnostic_failed):
+                    return
+                if filtering and time.monotonic() >= diagnostic_deadline:
+                    progress["timed_out"] = True
+                    return
+                progress["offset"] += 1
+                yield candidate
+            if not filtering:
+                return
+            if not rows or len(rows) < payload["limit"] or progress["offset"] >= SEARCH_RESULT_WINDOW:
+                progress["exhausted"] = True
+                return
+            if len(hits) >= page_size or diagnostic_failed:
+                return
+            if time.monotonic() >= diagnostic_deadline:
+                progress["timed_out"] = True
+                return
+            next_payload = {**payload, "offset": progress["offset"],
+                            "limit": min(page_size, SEARCH_RESULT_WINDOW - progress["offset"])}
+            batch = Meili().search(config["entries_index"], next_payload)
+
     keys = ("ID", "nazwa", "rodzaj", "tom", "strona", "parent_id", "nr", "typ_punktu_osadniczego", "powiat_ujednolicony")
-    for hit in result.get("hits", []):
+    for hit in candidates():
         summary = {key: hit[key] for key in keys if key in hit}
         summary["snippet"], summary["snippet_highlights"] = snippet_with_highlights(
             snippets.get(hit["ID"]) or hit.get("_formatted", {}).get("text", ""))
@@ -800,6 +896,7 @@ def search_data(args: dict) -> dict:
                             "limit": 2, "attributesToRetrieve": ["text"]})
                         evidence = "\n\n".join(part.get("text", "") for part in selected.get("hits", []))
                     remaining = diagnostic_deadline - time.monotonic()
+                    summary["relevance_diagnostic"]["evidence"] = evidence[:2500]
                     if remaining > 0:
                         diagnostic_stage = "ocena Ollama"
                         summary["relevance_diagnostic"] = diagnostic.assess(
@@ -813,13 +910,37 @@ def search_data(args: dict) -> dict:
                     error_code = exc.message if isinstance(exc, ServiceError) else error_type
                     summary["relevance_diagnostic"] = {"status": "unavailable", "error_type": error_type,
                                                        "http_status": http_status, "service": service,
-                                                       "error_code": error_code}
+                                                       "error_code": error_code, "evidence": evidence[:2500]}
                     app.logger.warning(
-                        "Diagnostyka trafności tev1 niedostępna: %s, usługa=%s, kod=%s, etap=%s, HTTP=%s, ID=%s, model=%s, timeout_s=%.2f",
+                        "Diagnostyka trafności niedostępna: %s, usługa=%s, kod=%s, etap=%s, HTTP=%s, ID=%s, model=%s, timeout_s=%.2f",
                         error_type, service, error_code, diagnostic_stage, http_status,
                         hit["ID"], diagnostic.model, min(diagnostic.timeout, remaining))
+        if "relevance_diagnostic" in summary:
+            summary["relevance_diagnostic"].setdefault("model", diagnostic.model)
+            summary["relevance_diagnostic"].setdefault("backend", diagnostic.backend)
+        if filtering:
+            assessment = summary.pop("relevance_diagnostic", {})
+            if assessment.get("status") != "ok":
+                progress["offset"] -= 1
+                progress["timed_out"] = assessment.get("status") == "budget_exceeded"
+                break
+            if assessment.get("would_reject"):
+                continue
         hits.append(summary)
+    if diagnostic_active and not filtering:
+        try:
+            write_search_csv(query, hits, diagnostic.model)
+        except OSError as exc:
+            app.logger.warning("Nie udało się zapisać CSV ocen trafności: %s", type(exc).__name__)
     estimated = result.get("estimatedTotalHits", len(hits))
+    if filtering:
+        return {"hits": hits, "estimated_total_hits": None, "page": page, "page_size": page_size,
+                "has_next": not progress["exhausted"] and progress["offset"] < SEARCH_RESULT_WINDOW,
+                "next_candidate_offset": progress["offset"], "verification_mode": "filter",
+                "verification_incomplete": progress["timed_out"] or diagnostic_failed,
+                "max_result_window": SEARCH_RESULT_WINDOW, "mode": mode,
+                "show_ranking_score": SHOW_SEARCH_RANKING_SCORE,
+                "processing_time_ms": result.get("processingTimeMs")}
     return {"hits": hits, "estimated_total_hits": estimated, "page": page, "page_size": page_size,
         "has_next": offset + len(hits) < min(estimated, SEARCH_RESULT_WINDOW) and bool(hits),
         "max_result_window": SEARCH_RESULT_WINDOW, "mode": mode, "show_ranking_score": SHOW_SEARCH_RANKING_SCORE,
@@ -837,6 +958,8 @@ def service_unavailable(exc):
 
 
 def service_error_message(exc: ServiceError) -> str:
+    if exc.service == "relevance":
+        return "Nie udało się ukończyć weryfikacji źródeł. Spróbuj ponownie lub wyłącz dodatkową weryfikację."
     if exc.service == "openai" and exc.status == 403 and exc.message == "model_not_found":
         return f"Projekt OpenAI nie ma dostępu do modelu {OpenAIChat().model}"
     return f"Usługa {exc.service} jest niedostępna"
@@ -995,6 +1118,13 @@ def chat():
     history = validated_chat_history(body.get("history", []))
     language = "en" if body.get("language") == "en" else "pl"
     retrieval_question = translate_search_query(question) if language == "en" else question
+    verify = body.get("verify", True)
+    if not isinstance(verify, bool):
+        raise ValueError("Parametr verify musi być wartością logiczną")
+    verification_enabled = (verify and os.getenv("CHAT_RELEVANCE_ENABLED", "true").strip().lower()
+                            in {"true", "1", "yes", "on"})
+    verifier = ChatPassageVerifier(retrieval_question, history, config["passages_index"],
+                                  verification_enabled)
     selected_filters = dict(body.get("filters") or {})
     if not selected_filters.get("powiat_ujednolicony"):
         district = model_question_district(retrieval_question, config)
@@ -1036,8 +1166,8 @@ def chat():
         for identifier in cited_ids:
             candidates.extend(chunk for chunk in historical_entry_passages(config, identifier)
                               if source_matches_filters(chunk, selected_filters))
-        chosen = select_relevant_passages(retrieval_question, candidates, history)
-        if not chosen:
+        chosen = verifier.select(candidates)
+        if not chosen and not verification_enabled:
             chosen = [previous for identifier in cited_ids
                       if (previous := historical_passage(config, identifier, question))
                       and source_matches_filters(previous, selected_filters)]
@@ -1056,7 +1186,8 @@ def chat():
             named_hits = Meili().search(config["passages_index"], named_payload).get("hits", [])
             related = [hit for hit in named_hits if (hit.get("nazwa") or "").casefold() == name.casefold()
                        and (not districts or hit.get("powiat_ujednolicony") in districts)]
-            add_hits(related, min(CHAT_SOURCE_LIMIT, len(sources) + 4), CHAT_PASSAGES_PER_ENTRY)
+            add_hits(verifier.select(related, min(CHAT_SOURCE_LIMIT, len(sources) + 4)),
+                     min(CHAT_SOURCE_LIMIT, len(sources) + 4), CHAT_PASSAGES_PER_ENTRY)
             rank = {}
             for hit in related:
                 rank.setdefault(hit["entry_id"], len(rank))
@@ -1072,8 +1203,8 @@ def chat():
         for name in mentioned_names:
             named.extend(named_passages(config["passages_index"], name, expression,
                                         payload["attributesToRetrieve"], question))
-        selected = select_relevant_passages(
-            retrieval_question, named, history, CHAT_SOURCE_LIMIT - CHAT_NAMED_BACKGROUND_LIMIT,
+        selected = verifier.select(
+            named, CHAT_SOURCE_LIMIT - CHAT_NAMED_BACKGROUND_LIMIT,
             force=True)
         add_hits(named if selected is None else selected,
                  CHAT_SOURCE_LIMIT - CHAT_NAMED_BACKGROUND_LIMIT, CHAT_PASSAGES_PER_ENTRY)
@@ -1099,16 +1230,18 @@ def chat():
                     candidates.append(background[index])
                 if index < len(metadata):
                     candidates.append(metadata[index])
-            selected = select_relevant_passages(
-                retrieval_question, candidates, history, CHAT_SOURCE_LIMIT, force=True,
+            selected = verifier.select(
+                candidates, CHAT_SOURCE_LIMIT, force=True,
                 per_batch_limit=CHAT_GENERIC_SELECTION_PER_BATCH, description_only=True)
             add_hits(candidates if selected is None else selected, CHAT_SOURCE_LIMIT,
                      CHAT_PASSAGES_PER_ENTRY)
         else:
-            add_hits(background, background_limit)
+            add_hits(verifier.select(background, background_limit), background_limit)
     log_chat_decision("źródła po selekcji", liczba=len(sources),
                       passage_ids=[source["passage_id"] for source in sources])
     if not sources:
+        if verifier.incomplete:
+            raise ServiceError("relevance", message="budget_exceeded")
         empty_answer = ("The search results do not provide enough information to answer this question."
                         if language == "en" else
                         "Wyniki wyszukiwania nie pozwalają odpowiedzieć na to pytanie.")
@@ -1208,6 +1341,8 @@ def chat():
 
     def result_with_diagnostics(answer: str, provider: str, model: str) -> dict:
         result = chat_response(answer, sources, provider, model, language)
+        result["verification_incomplete"] = verifier.incomplete
+        result["verification_enabled"] = verification_enabled
         if body.get("diagnostics") is True:
             result["retrieved_passage_ids"] = [passage_id for source in sources
                                                 for passage_id in source["passage_ids"]]
@@ -1365,8 +1500,9 @@ def log_model_configuration():
         "[SGKP] Parametry wywołań modeli:\n"
         f"  Diagnostyka wywołań Qwena: {'włączona' if local.debug else 'wyłączona'}\n"
         f"  Oceny trafności wyszukiwania: {'włączone' if SHOW_SEARCH_RANKING_SCORE else 'wyłączone'}\n"
-        f"  Diagnostyka tev1: {'włączona' if diagnostic.enabled else 'wyłączona'}, "
+        f"  Diagnostyka trafności: {'włączona' if diagnostic.enabled else 'wyłączona'}, "
         f"model={diagnostic.model}, próg={diagnostic.threshold}, budżet_s={diagnostic.budget}\n"
+        f"  Weryfikacja źródeł Konwersacji: CHAT_RELEVANCE_ENABLED={os.getenv('CHAT_RELEVANCE_ENABLED', 'true')}, model={diagnostic.model}\n"
         f"  Qwen: model={local.model}, thinking={thinking}, reasoning_effort={effort}, "
         f"temperature={local.temperature}, max_output_tokens={local.max_output_tokens} "
         f"(ponowienie: {local.max_output_tokens * 2})\n"

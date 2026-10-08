@@ -1,0 +1,32 @@
+[
+  {
+    "status": "ok",
+    "score": 0.8744169347566211,
+    "method": "sdk",
+    "run": 1,
+    "seconds": 0.42440517500654096
+  },
+  {
+    "http_status": 200,
+    "score": 0.8744169347566211,
+    "status": "ok",
+    "method": "requests",
+    "run": 1,
+    "seconds": 0.2483825169983902
+  },
+  {
+    "status": "ok",
+    "score": 0.8744169347566211,
+    "method": "sdk",
+    "run": 2,
+    "seconds": 0.2502546470059315
+  },
+  {
+    "http_status": 200,
+    "score": 0.8744169347566211,
+    "status": "ok",
+    "method": "requests",
+    "run": 2,
+    "seconds": 0.4999318789996323
+  }
+]

@@ -50,10 +50,15 @@ const UI_COPY = {
     industry: "Przemysł", mills: "Młyny", archaeology: "Archeologia", nameVariants: "Warianty nazw",
     yes: "Tak", no: "Nie", collectiveEntry: "Hasło zbiorcze: {name}", openCollective: "Otwórz hasło zbiorcze",
     searching: "Wyszukiwanie…", rankingScore: "Ocena trafności",
-    relevanceKeep: "tev1: zachowałby wynik", relevanceReject: "tev1: odrzuciłby wynik",
-    relevanceUnavailable: "tev1: ocena niedostępna", relevanceBudget: "tev1: pominięto — limit czasu",
-    relevanceSkippedError: "tev1: pominięto po błędzie wcześniejszej oceny",
-    relevanceEvidence: "Fragment oceniony przez tev1 (diagnostyka)",
+    chatVerifyIncomplete: "Limit czasu weryfikacji został osiągnięty. Odpowiedź opiera się na dotychczas zaakceptowanych źródłach.",
+    chatVerifyHint: "(Uwaga: wydłuża przygotowanie odpowiedzi)",
+    verifyResults: "Dodatkowa weryfikacja wyników", verifyHint: "Uwaga: wydłuża wyszukiwanie",
+    searchingVerified: "Wyszukuję i weryfikuję wyniki — proszę czekać…",
+    verifiedCount: "Zaakceptowane wyniki: {count}", verificationIncomplete: "Weryfikacja nie została ukończona. Możesz kontynuować na następnej stronie.",
+    relevanceKeep: "{model}: zachowałby wynik", relevanceReject: "{model}: odrzuciłby wynik",
+    relevanceUnavailable: "{model}: ocena niedostępna", relevanceBudget: "{model}: pominięto — limit czasu",
+    relevanceSkippedError: "{model}: pominięto po błędzie wcześniejszej oceny",
+    relevanceEvidence: "Fragment oceniony przez {model} (diagnostyka)",
     relevanceTime: "czas wywołania: {seconds} s", relevanceCached: "ocena z pamięci",
     resultsRange: "Wyniki {start}–{end} · około {total} trafień",
     resultsRangeLimited: "Wyniki {start}–{end} · można przeglądać maksymalnie pierwsze {limit} wyników",
@@ -127,10 +132,15 @@ const UI_COPY = {
     industry: "Industry", mills: "Mills", archaeology: "Archaeology", nameVariants: "Name variants",
     yes: "Yes", no: "No", collectiveEntry: "Collective entry: {name}", openCollective: "Open collective entry",
     searching: "Searching…", rankingScore: "Relevance score",
-    relevanceKeep: "tev1: would keep", relevanceReject: "tev1: would reject",
-    relevanceUnavailable: "tev1: assessment unavailable", relevanceBudget: "tev1: skipped — time limit",
-    relevanceSkippedError: "tev1: skipped after an earlier assessment failed",
-    relevanceEvidence: "Passage assessed by tev1 (diagnostic)",
+    chatVerifyIncomplete: "The verification time limit was reached. The answer uses the sources accepted so far.",
+    chatVerifyHint: "(Note: increases answer preparation time)",
+    verifyResults: "Additional result verification", verifyHint: "Note: increases search time",
+    searchingVerified: "Searching and verifying results — please wait…",
+    verifiedCount: "Accepted results: {count}", verificationIncomplete: "Verification was not completed. You can continue on the next page.",
+    relevanceKeep: "{model}: would keep", relevanceReject: "{model}: would reject",
+    relevanceUnavailable: "{model}: assessment unavailable", relevanceBudget: "{model}: skipped — time limit",
+    relevanceSkippedError: "{model}: skipped after an earlier assessment failed",
+    relevanceEvidence: "Passage assessed by {model} (diagnostic)",
     relevanceTime: "request time: {seconds} s", relevanceCached: "cached assessment",
     resultsRange: "Results {start}–{end} · about {total} hits",
     resultsRangeLimited: "Results {start}–{end} · browsing is limited to the first {limit} results",
@@ -164,7 +174,7 @@ const UI_COPY = {
 };
 let currentLanguage = "pl";
 const state = { page: 1, hasNext: false, entry: null, highlight: null, request: 0, gminas: [], chatBusy: false,
-  chatController: null, chatGeneration: 0, chatHistory: [], exportTurns: [], searchData: null,
+  chatController: null, chatGeneration: 0, chatHistory: [], exportTurns: [], searchData: null, searchOffsets: {},
   browsePage: 1, browseHasNext: false, browseData: null, browseRequest: 0, browseView: "list", showParentContext: true };
 
 function setText(node, value) { node.textContent = value == null ? "" : String(value); }
@@ -325,6 +335,7 @@ function updateLocalityUi(clear = false) {
 function modeUi() {
   const mode = selectedMode();
   $("ratio-line").classList.toggle("visible", mode === "hybrid");
+  $("verify-line").hidden = mode !== "semantic";
   $("query").placeholder = t(mode === "semantic" ? "semanticQueryPlaceholder" : "queryPlaceholder");
 }
 function viewFromHash() {
@@ -348,6 +359,8 @@ function queryParams(page) {
   const params = new URLSearchParams({ q: $("query").value.trim(), mode: selectedMode(), page: String(page) });
   params.set("language", currentLanguage);
   if (selectedMode() === "hybrid") params.set("ratio", String(Number($("ratio").value) / 100));
+  if (selectedMode() === "semantic") params.set("verify", String($("verify-results").checked));
+  if (state.searchOffsets[page] !== undefined) params.set("candidate_offset", String(state.searchOffsets[page]));
   for (const [key, value] of Object.entries(activeFilters())) params.set(key, value);
   return params;
 }
@@ -407,9 +420,9 @@ function resultCard(hit) {
   if (hit.relevance_diagnostic) {
     const diagnostic = hit.relevance_diagnostic;
     const label = diagnostic.status === "ok" ?
-      `${t(diagnostic.would_reject ? "relevanceReject" : "relevanceKeep")} · ${Number(diagnostic.score).toFixed(3)}` :
+      `${t(diagnostic.would_reject ? "relevanceReject" : "relevanceKeep", {model: diagnostic.model || "tev1"})} · ${Number(diagnostic.score).toFixed(3)}` :
       t(diagnostic.status === "budget_exceeded" ? "relevanceBudget" :
-        diagnostic.status === "skipped_after_error" ? "relevanceSkippedError" : "relevanceUnavailable");
+        diagnostic.status === "skipped_after_error" ? "relevanceSkippedError" : "relevanceUnavailable", {model: diagnostic.model || "tev1"});
     const error = diagnostic.error_type ? ` (${diagnostic.error_type}${diagnostic.http_status ? ", HTTP " + diagnostic.http_status : ""})` : "";
     const timing = Number.isFinite(diagnostic.decision_seconds) ? " · " + t("relevanceTime", {
       seconds: diagnostic.decision_seconds.toLocaleString(currentLanguage === "en" ? "en" : "pl-PL", {
@@ -420,7 +433,7 @@ function resultCard(hit) {
     card.append(element("p", label + error + timing + cached, "field-hint"));
     if (diagnostic.evidence) {
       const details = element("details");
-      details.append(element("summary", t("relevanceEvidence")), element("p", diagnostic.evidence));
+      details.append(element("summary", t("relevanceEvidence", {model: diagnostic.model || "tev1"})), element("p", diagnostic.evidence));
       card.append(details);
     }
   }
@@ -466,7 +479,9 @@ function renderSearchResults(data) {
     const start = (data.page - 1) * data.page_size + 1;
     const end = start + data.hits.length - 1;
     const beyondWindow = Number(data.estimated_total_hits) > Number(data.max_result_window);
-    if (data.mode === "semantic" && beyondWindow) {
+    if (data.verification_mode === "filter") {
+      setText($("status"), t("verifiedCount", {count: data.hits.length}));
+    } else if (data.mode === "semantic" && beyondWindow) {
       setText($("status"), t("resultsRangeLimited", {start, end, limit: Number(data.max_result_window).toLocaleString(currentLanguage === "en" ? "en" : "pl-PL")}));
     } else {
       setText($("status"), t("resultsRange", {start, end, total: data.estimated_total_hits}));
@@ -476,15 +491,21 @@ function renderSearchResults(data) {
   } else {
     setText($("status"), t("noResults"));
     $("results").append(makeEmpty(t("notFoundTitle"), t("noResultsAdvice")));
-    $("pagination").hidden = true;
+    $("pagination").hidden = !data.has_next && data.page <= 1;
+  }
+  if (data.verification_incomplete) {
+    setText($("status"), t("verifiedCount", {count: data.hits.length}) + " · " + t("verificationIncomplete"));
   }
 }
 async function search(page = 1) {
+  if (page === 1) state.searchOffsets = {};
   const params = queryParams(page);
   if (!params.get("q")) return;
   const current = ++state.request;
   state.searchData = null;
-  setText($("status"), t("searching"));
+  setText($("status"), t(params.get("verify") === "true" ? "searchingVerified" : "searching"));
+  $("status").classList.add("is-searching");
+  $("results").setAttribute("aria-busy", "true");
   $("status").classList.remove("error");
   $("results").replaceChildren();
   $("pagination").hidden = true;
@@ -492,6 +513,7 @@ async function search(page = 1) {
     const data = await api("api/v1/search?" + params);
     if (current !== state.request) return;
     state.searchData = data;
+    if (data.next_candidate_offset !== undefined) state.searchOffsets[page + 1] = data.next_candidate_offset;
     renderSearchResults(data);
     history.replaceState(null, "", location.pathname + "?" + params + (location.hash || "#wyszukiwanie"));
   } catch (error) {
@@ -499,6 +521,11 @@ async function search(page = 1) {
     setText($("status"), translatedError(error.message));
     $("status").classList.add("error");
     $("results").append(makeEmpty(t("searchFailedTitle"), t("serviceRetry")));
+  } finally {
+    if (current === state.request) {
+      $("status").classList.remove("is-searching");
+      $("results").setAttribute("aria-busy", "false");
+    }
   }
 }
 function renderBrowseResults(data) {
@@ -900,7 +927,7 @@ async function askChat(question, filters, history, answerNode, sourcesNode, stat
     const response = await fetch("api/v1/chat", {
       method: "POST",
       headers: {"Content-Type": "application/json", "Accept": "text/event-stream"},
-      body: JSON.stringify({question, filters, history, language: currentLanguage}), signal
+      body: JSON.stringify({question, filters, history, language: currentLanguage, verify: $("chat-verify-results").checked}), signal
     });
     if (!response.ok) {
       throw new Error(await responseError(response, "conversationServiceUnavailable"));
@@ -1060,7 +1087,8 @@ async function submitChat(event) {
     state.exportTurns.push({question, answer: result.answer, provider: result.provider, model: result.model,
       sources: (result.sources || []).map(source => ({citation: source.citation, nazwa: source.nazwa,
         tom: source.tom, strona: source.strona}))});
-    setText(nodes.status, result.provider === "openai" ? t("openaiAnswerNotice", {model: result.model}) : "");
+    setText(nodes.status, [result.provider === "openai" ? t("openaiAnswerNotice", {model: result.model}) : "",
+      result.verification_incomplete ? t("chatVerifyIncomplete") : ""].filter(Boolean).join(" "));
     nodes.status.classList.remove("is-working");
     nodes.heading.hidden = !nodes.sources.children.length;
     $("question").value = "";
@@ -1142,6 +1170,7 @@ async function initialize() {
   });
   $("ratio").addEventListener("input", () => setText($("ratio-value"), $("ratio").value + "%"));
   $("ratio").addEventListener("change", () => { if ($("query").value.trim()) search(1); });
+  $("verify-results").addEventListener("change", () => { if ($("query").value.trim()) search(1); });
   for (const input of document.querySelectorAll('input[name="mode"]')) input.addEventListener("change", () => { modeUi(); if ($("query").value.trim()) search(1); });
   for (const input of document.querySelectorAll('input[name="locality"]')) input.addEventListener("change", () => { updateLocalityUi(true); if ($("query").value.trim()) search(1); });
   for (const id of [...optionFields, "gmina", "kingdom-only"]) $(id).addEventListener("change", () => { updateFilterToggleLabel(); if ($("query").value.trim()) search(1); });
@@ -1162,6 +1191,8 @@ async function initialize() {
   const mode = params.get("mode");
   if (["text", "hybrid", "semantic"].includes(mode)) document.querySelector('input[name="mode"][value="' + mode + '"]').checked = true;
   if (params.get("ratio")) $("ratio").value = String(Math.round(Number(params.get("ratio")) * 100));
+  $("verify-results").checked = params.get("verify") !== "false";
+  if (params.has("candidate_offset")) state.searchOffsets[Number(params.get("page") || 1)] = Number(params.get("candidate_offset"));
   setText($("ratio-value"), $("ratio").value + "%");
   modeUi();
   for (const id of optionFields) if (params.get(id)) $(id).value = params.get(id);

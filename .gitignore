@@ -219,3 +219,6 @@ notatki.txt
 notatki.md
 json_poprawki/
 DOKUMENTACJA_TECHNICZNA.md
+
+# Generated relevance assessment exports
+/log/*.csv

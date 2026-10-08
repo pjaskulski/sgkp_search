@@ -84,6 +84,15 @@ select { appearance: auto; }
 .ratio-line.visible { display: flex; }
 .ratio-line input { flex: 1; accent-color: var(--accent); }
 .ratio-line output { min-width: 35px; color: var(--accent); font-weight: 700; }
+.verify-line { display: flex; flex-direction: column; gap: 5px; color: var(--ink); font-size: 14px; }
+.verify-line[hidden] { display: none; }
+.verify-line input { accent-color: var(--accent); }
+.verify-line small { color: var(--ink-soft); font-size: 12px; }
+#assistant-view > .verify-line { margin-bottom: 28px; }
+#status.is-searching { display: flex; align-items: center; gap: 12px; color: var(--accent); font-weight: 650; }
+#status.is-searching::before { content: ""; display: inline-block; flex: 0 0 24px; height: 24px; border: 3px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: search-spin .8s linear infinite; }
+@keyframes search-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { #status.is-searching::before { animation: none; } }
 .search-workspace { display: grid; grid-template-columns: minmax(230px, 277px) minmax(0, 1fr); align-items: start; gap: clamp(24px, 4vw, 58px); margin-top: 26px; }
 .filter-column { min-width: 0; }
 .mobile-filter-toggle { display: none; }
