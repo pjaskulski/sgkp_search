@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 import app as web
+import sgkp_chat_log as logs
 
 
 def passage(i):
@@ -18,19 +19,27 @@ class ChatRelevanceTests(unittest.TestCase):
             "would_reject": source["entry_id"] == "entry0"}
         return engine
 
-    def test_rejected_candidates_do_not_count_towards_source_limit(self):
+    def test_all_accepted_candidates_survive_the_old_source_limit(self):
         engine = self.engine()
         with patch.object(web, "RelevanceDiagnostic", return_value=engine), \
              patch.object(web, "preliminary_chat_answer") as qwen:
             verifier = web.ChatPassageVerifier("Polskie pytanie", [], "passages", True)
             selected = verifier.select([passage(i) for i in range(4)], 2)
-            self.assertEqual([s["entry_id"] for s in selected], ["entry1", "entry2"])
-            self.assertEqual(engine.assess.call_count, 3)
+            self.assertEqual([s["entry_id"] for s in selected], ["entry1", "entry2", "entry3"])
+            self.assertEqual(engine.assess.call_count, 4)
             verifier.select([passage(1)])
-            self.assertEqual(engine.assess.call_count, 3)
+            self.assertEqual(engine.assess.call_count, 4)
             qwen.assert_not_called()
         self.assertEqual(engine.assess.call_args.args[0], "Polskie pytanie")
         self.assertIn("archeo", engine.assess.call_args.args[1])
+
+    def test_more_than_three_fragments_from_one_entry_are_retained(self):
+        engine = self.engine()
+        candidates = [{**passage(1), "passage_id": f"entry1_p{i:04d}"} for i in range(8)]
+        with patch.object(web, "RelevanceDiagnostic", return_value=engine):
+            selected = web.ChatPassageVerifier("Pytanie", [], "passages", True).select(candidates)
+        self.assertEqual(len(selected), 8)
+        self.assertEqual(engine.assess.call_count, 8)
 
     def test_disabled_does_not_call_any_selection_model(self):
         with patch.object(web, "RelevanceDiagnostic") as engine, \
@@ -39,6 +48,13 @@ class ChatRelevanceTests(unittest.TestCase):
             self.assertEqual(verifier.select([passage(0)]), [passage(0)])
             engine.assert_not_called()
             qwen.assert_not_called()
+
+    def test_disabled_verification_log_does_not_claim_model_assessment(self):
+        with patch.object(logs, "_current") as context, patch.object(logs, "record") as record:
+            context.get.return_value = object()
+            verifier = web.ChatPassageVerifier("Pytanie", [], "passages", False)
+            verifier.select([passage(0)])
+        self.assertEqual(record.call_args.args[0], "przygotowanie kandydatów bez weryfikacji")
 
     def test_followup_includes_history(self):
         engine = self.engine()
@@ -54,7 +70,7 @@ class ChatRelevanceTests(unittest.TestCase):
     def test_timeout_keeps_only_verified_sources(self):
         engine = self.engine()
         with patch.object(web, "RelevanceDiagnostic", return_value=engine), \
-             patch.object(web.time, "monotonic", side_effect=[0, 0, 61]):
+             patch.object(web.time, "monotonic", side_effect=[0, 0, 0, 0, 61]):
             verifier = web.ChatPassageVerifier("Pytanie", [], "passages", True)
             selected = verifier.select([passage(1), passage(2)])
         self.assertEqual(selected, [passage(1)])
@@ -68,6 +84,12 @@ class ChatRelevanceTests(unittest.TestCase):
             verifier = web.ChatPassageVerifier("Pytanie", [], "passages", True)
             with self.assertRaises(web.ServiceError):
                 verifier.select([passage(1)])
+
+    def test_api_rejects_string_deeper_analysis(self):
+        with patch.object(web, "manifest", return_value={"passages_index": "passages"}):
+            response = web.app.test_client().post("/api/v1/chat", json={
+                "question": "Pytanie", "deeper_analysis": "false"})
+        self.assertEqual(response.status_code, 400)
 
     def test_api_rejects_string_verify(self):
         with patch.object(web, "manifest", return_value={"passages_index": "passages"}):

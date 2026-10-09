@@ -16,6 +16,7 @@ from urllib.parse import quote
 
 import requests
 
+from sgkp_chat_log import record as record_chat_stage, timed_stage
 from sgkp_core import FILTER_FIELDS, read_volume
 
 
@@ -84,6 +85,7 @@ class Meili:
     def version(self):
         return self.request("GET", "/version")
 
+    @timed_stage("wyszukiwanie Meilisearch")
     def search(self, index: str, payload: dict):
         return self.request("POST", f"/indexes/{quote(index, safe='')}/search", body=payload, timeout=40)
 
@@ -171,6 +173,7 @@ class Embeddings:
             raise ServiceError("embedding", message=type(exc).__name__) from exc
         return self._parse_vectors(response, texts)
 
+    @timed_stage("obliczanie embeddingów")
     def embed(self, texts: list[str]) -> list[list[float]]:
         providers = {"local": (self._embed_local, self.key),
                      "jina": (self._embed_jina, self.jina_key)}
@@ -195,7 +198,8 @@ class Embeddings:
 
 
 class Chat:
-    def __init__(self, *, preliminary: bool = False, stage: str = "wywołanie Qwena"):
+    def __init__(self, *, preliminary: bool = False, stage: str = "wywołanie Qwena",
+                 enable_thinking: bool | None = None):
         self.url = os.getenv("CHAT_ENDPOINT", "https://ai-test.ihpan.edu.pl/v1/chat/completions")
         self.model = os.getenv("CHAT_MODEL", "qwen3.8-flash-next-fp8")
         self.key = os.getenv("AI_TEST_KEY")
@@ -211,10 +215,15 @@ class Chat:
             thinking = os.getenv("QWEN_ENABLE_THINKING", "false").strip().lower()
             if thinking not in {"true", "false", "1", "0", "yes", "no", "on", "off"}:
                 raise ValueError("QWEN_ENABLE_THINKING must be true or false")
-            self.enable_thinking = thinking in {"true", "1", "yes", "on"}
+            if enable_thinking is not None and not isinstance(enable_thinking, bool):
+                raise ValueError("enable_thinking must be a boolean")
+            self.enable_thinking = (thinking in {"true", "1", "yes", "on"}
+                                    if enable_thinking is None else enable_thinking)
             self.reasoning_effort = os.getenv("QWEN_REASONING_EFFORT", "").strip().lower()
             if self.reasoning_effort not in {"", "low", "medium", "xhigh"}:
                 raise ValueError("QWEN_REASONING_EFFORT must be low, medium or xhigh")
+            if enable_thinking is not None:
+                self.reasoning_effort = "low" if self.enable_thinking else ""
             self.temperature = float(os.getenv(
                 "QWEN_TEMPERATURE", "1.0" if self.enable_thinking else "0.7"))
         if not math.isfinite(self.temperature) or not 0 <= self.temperature <= 2:
@@ -233,15 +242,11 @@ class Chat:
             (self.reasoning_effort or "domyślny serwera")
             if self.enable_thinking else "pominięty (Thinking wyłączony)"
         )
-        print(
-            f"[CHAT_DEBUG] etap={self.stage!r} model={self.model} tryb={mode} "
-            f"thinking={str(self.enable_thinking).lower()} reasoning_effort={effort} "
-            f"temperature={self.temperature} max_tokens={max_tokens} "
-            f"input_tokens={input_tokens} output_tokens={output_tokens} "
-            f"reasoning_tokens={reasoning_tokens} czas_s={time.monotonic() - started:.2f} "
-            f"status={status}",
-            flush=True,
-        )
+        record_chat_stage(self.stage, time.monotonic() - started, model=self.model,
+                          tryb=mode, thinking=self.enable_thinking, reasoning_effort=effort,
+                          temperature=self.temperature, max_tokens=max_tokens,
+                          input_tokens=input_tokens, output_tokens=output_tokens,
+                          reasoning_tokens=reasoning_tokens, status=status)
 
     def request_payload(self, messages: list[dict], max_tokens: int, *, stream: bool) -> dict:
         payload = {"model": self.model, "messages": messages, "max_tokens": max_tokens,
@@ -377,6 +382,7 @@ class OpenAIChat:
             raise ServiceError("openai", response.status_code, error_code or "request_failed")
         return response
 
+    @timed_stage("wywołanie OpenAI — odpowiedź")
     def answer(self, messages: list[dict], max_tokens: int | None = None) -> str:
         max_tokens = max_tokens if max_tokens is not None else self.max_output_tokens
         with self.request(messages, max_tokens, stream=False) as response:
@@ -393,6 +399,7 @@ class OpenAIChat:
             raise ServiceError("openai", message="empty_answer")
         return text
 
+    @timed_stage("wywołanie OpenAI — odpowiedź strumieniowa")
     def stream(self, messages: list[dict], max_tokens: int | None = None):
         max_tokens = max_tokens if max_tokens is not None else self.max_output_tokens
         response = self.request(messages, max_tokens, stream=True)

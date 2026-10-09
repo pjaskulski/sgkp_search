@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import html
+import json
 import re
 import threading
 from datetime import datetime
@@ -22,6 +23,7 @@ from sgkp_services import scan_url
 
 MAX_EXPORT_TURNS = 200
 MAX_EXPORT_BYTES = 8_000_000
+MAX_EXPORT_ANSWER_CHARS = 300_000
 _font_lock = threading.Lock()
 _fonts_ready = False
 _font_files = {
@@ -36,27 +38,33 @@ def validate_export_turns(raw: object) -> list[dict]:
     """Bound browser-provided content before passing it to ReportLab."""
     if not isinstance(raw, list) or not 1 <= len(raw) <= MAX_EXPORT_TURNS:
         raise ValueError("Eksport wymaga od 1 do 200 ukończonych odpowiedzi")
+    if len(json.dumps(raw, ensure_ascii=False).encode("utf-8")) > MAX_EXPORT_BYTES:
+        raise ValueError("Konwersacja jest zbyt długa do eksportu")
     turns = []
     for turn in raw:
         if not isinstance(turn, dict):
             raise ValueError("Nieprawidłowy wpis konwersacji")
         question, answer, sources = turn.get("question"), turn.get("answer"), turn.get("sources")
-        if (not isinstance(question, str) or not 1 <= len(question.strip()) <= 500
-                or not isinstance(answer, str) or not 1 <= len(answer.strip()) <= 40_000
-                or not isinstance(sources, list) or len(sources) > 20):
-            raise ValueError("Nieprawidłowy wpis konwersacji")
+        if not isinstance(question, str) or not 1 <= len(question.strip()) <= 500:
+            raise ValueError("Pytanie w eksporcie musi zawierać od 1 do 500 znaków")
+        if not isinstance(answer, str) or not 1 <= len(answer.strip()) <= MAX_EXPORT_ANSWER_CHARS:
+            raise ValueError(f"Odpowiedź w eksporcie musi zawierać od 1 do {MAX_EXPORT_ANSWER_CHARS} znaków")
+        if not isinstance(sources, list):
+            raise ValueError("Źródła w eksporcie muszą być listą")
         checked_sources = []
+        seen_citations = set()
         for source in sources:
             if not isinstance(source, dict):
                 raise ValueError("Nieprawidłowe źródło w eksporcie")
             citation, name, volume, page = (
                 source.get("citation"), source.get("nazwa"), source.get("tom"), source.get("strona"))
-            if (type(citation) is not int or not 1 <= citation <= 20
+            if (type(citation) is not int or citation < 1 or citation in seen_citations
                     or not isinstance(name, str) or not 1 <= len(name.strip()) <= 200
                     or (volume is not None and (not isinstance(volume, str)
                         or not re.fullmatch(r"(?:0[1-9]|1[0-6])", volume)))
                     or (page is not None and (type(page) is not int or not 1 <= page <= 1000))):
                 raise ValueError("Nieprawidłowe źródło w eksporcie")
+            seen_citations.add(citation)
             checked_sources.append({"citation": citation, "nazwa": name.strip(),
                                     "tom": volume, "strona": page})
         provider = turn.get("provider")

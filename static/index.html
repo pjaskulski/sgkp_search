@@ -62,14 +62,13 @@
         </div>
       </form>
 
-      <div class="search-workspace">
+      <div class="search-workspace filter-workspace">
         <aside id="search-filter-slot" class="filter-column" aria-label="Filtry wyszukiwania" data-i18n-aria="searchFiltersAria">
-          <button id="mobile-filter-toggle" class="mobile-filter-toggle" type="button" aria-controls="filter-panel" aria-expanded="false">Pokaż filtry <span aria-hidden="true">⌄</span></button>
-          <section id="filter-panel" class="filter-panel" aria-labelledby="filter-title">
-            <div class="filter-heading">
-              <div><p class="eyebrow" data-i18n="narrowResults">Zawęź wyniki</p><h2 id="filter-title" data-i18n="filters">Filtry</h2></div>
-              <button id="clear-filters" class="text-button" type="button" data-i18n="clear">Wyczyść</button>
-            </div>
+          <div class="filter-toolbar">
+            <button class="filter-toggle" data-filter-toggle type="button" aria-controls="filter-panel" aria-expanded="true"><span class="filter-toggle-icon" aria-hidden="true">‹</span><span class="filter-toggle-label">Filtry</span></button>
+            <button class="text-button filter-clear" data-clear-filters type="button" data-i18n="clear">Wyczyść</button>
+          </div>
+          <section id="filter-panel" class="filter-panel" aria-label="Filtry" data-i18n-aria="filters">
             <div class="filter-block">
               <label class="field-label" for="tom" data-i18n="volume">Tom</label>
               <select id="tom"><option value="" data-i18n="allVolumes">Wszystkie tomy</option></select>
@@ -125,14 +124,22 @@
 
     <section id="assistant-view" class="view" role="tabpanel" aria-labelledby="tab-assistant" hidden>
       <h1 class="sr-only" data-i18n="chatPageTitle">Konwersacja o treści SGKP</h1>
-      <p class="eyebrow assistant-filter-eyebrow" data-i18n="chatFilters">Filtry</p>
-      <details id="assistant-filter-details" class="assistant-filters">
-        <summary><span id="assistant-filter-label" data-i18n="sourceFilters">Filtry źródeł</span> <span id="assistant-filter-hint">Ogranicz zakres odpowiedzi</span></summary>
-        <div id="assistant-filter-slot"></div>
-      </details>
-      <label class="verify-line">
-        <span><input id="chat-verify-results" type="checkbox" checked> <span data-i18n="verifyResults">Dodatkowa weryfikacja wyników</span> <small data-i18n="chatVerifyHint">(Uwaga: wydłuża przygotowanie odpowiedzi)</small></span>
-      </label>
+      <div class="assistant-workspace filter-workspace">
+        <aside id="assistant-filter-slot" class="filter-column" aria-label="Filtry źródeł" data-i18n-aria="sourceFilters">
+          <div class="filter-toolbar">
+            <button class="filter-toggle" data-filter-toggle type="button" aria-controls="filter-panel" aria-expanded="true"><span class="filter-toggle-icon" aria-hidden="true">‹</span><span class="filter-toggle-label">Filtry</span></button>
+            <button class="text-button filter-clear" data-clear-filters type="button" data-i18n="clear">Wyczyść</button>
+          </div>
+        </aside>
+        <div class="assistant-content">
+      <div class="chat-options">
+        <label class="verify-line">
+          <span><input id="chat-verify-results" type="checkbox" checked> <span data-i18n="verifyResults">Dodatkowa weryfikacja wyników</span> <small data-i18n="chatVerifyHint">(wydłuża przygotowanie odpowiedzi)</small></span>
+        </label>
+        <label class="verify-line" title="Włącza dodatkowe rozumowanie modelu podczas przygotowywania końcowej odpowiedzi. Może pomóc przy złożonych pytaniach, ale nie gwarantuje większej poprawności." data-i18n-title="deeperAnalysisTooltip">
+          <span><input id="chat-deeper-analysis" type="checkbox"> <span data-i18n="deeperAnalysis">Pogłębiona analiza</span> <small data-i18n="chatVerifyHint">(wydłuża przygotowanie odpowiedzi)</small></span>
+        </label>
+      </div>
       <div id="chat-intro" class="chat-intro">
         <p class="eyebrow" data-i18n="exampleQuestions">Przykładowe pytania</p>
         <div class="suggestions">
@@ -160,20 +167,27 @@
         </div>
         <p data-i18n="verifyAnswers">Odpowiedzi generowane automatycznie należy weryfikować w przywołanych hasłach.</p>
       </form>
+        </div>
+      </div>
     </section>
 
     <section id="browse-view" class="view" role="tabpanel" aria-labelledby="tab-browse" hidden>
       <h1 class="sr-only" data-i18n="browsePageTitle">Przeglądanie haseł SGKP</h1>
       <div class="browse-heading">
         <div><h2 data-i18n="browseHeading">Przeglądanie haseł</h2></div>
+        <form id="browse-filters" class="browse-filters">
+          <label class="browse-name-label" for="browse-name"><span data-i18n="browseName">Nazwa</span>
+            <input id="browse-name" type="search" maxlength="300" autocomplete="off" placeholder="Nazwa lub fragment nazwy" data-i18n-placeholder="browseNamePlaceholder">
+          </label>
         <label class="browse-volume-label" for="browse-volume"><span data-i18n="browseVolume">Tom</span>
           <select id="browse-volume" aria-label="Tom" data-i18n-aria="browseVolume">
             <option value="01" selected>1</option><option value="02">2</option><option value="03">3</option><option value="04">4</option>
             <option value="05">5</option><option value="06">6</option><option value="07">7</option><option value="08">8</option>
             <option value="09">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option>
-            <option value="13">13</option><option value="14">14</option><option value="15">15 cz. 1</option><option value="16">16 cz. 2</option>
+            <option value="13">13</option><option value="14">14</option><option value="15">15 cz. 1</option><option value="16">15 cz. 2</option>
           </select>
         </label>
+        </form>
       </div>
       <div class="browse-results-toolbar">
         <p id="browse-status" role="status" data-i18n="browseInitial">Wybierz tom, aby wyświetlić listę haseł.</p>
@@ -231,6 +245,7 @@
       <section>
         <h3 data-i18n="helpChatTitle">Konwersacja</h3>
         <p data-i18n="helpChatText">Zadaj pytanie o treść słownika. Odpowiedź powstaje na podstawie odnalezionych fragmentów haseł i zawiera odsyłacze do wykorzystanych źródeł. Otwórz cytowane hasła, aby sprawdzić odpowiedź. Możesz zadać pytanie doprecyzowujące odnoszące się do poprzednich odpowiedzi. Przycisk „Pobierz PDF” zapisuje bieżącą konwersację wraz ze źródłami; „Wyczyść rozmowę” usuwa ją z karty przeglądarki. Gdy model lokalny jest niedostępny, bieżące pytanie, krótka historia rozmowy i znalezione fragmenty są przesyłane do usługi OpenAI; aplikacja oznacza taką odpowiedź. Konwersacja nie służy do sporządzania pełnych zestawień wszystkich miejscowości.</p>
+        <p data-i18n="helpChatTimeLimit">Serwer może przerwać obsługę pytania, jeśli przetwarzanie trwa dłużej niż 5 minut (300 sekund). Limit obejmuje wyszukiwanie źródeł, ich weryfikację i przygotowanie odpowiedzi. W takim przypadku spróbuj ponownie lub zawęź zakres pytania.</p>
       </section>
     </div>
   </dialog>

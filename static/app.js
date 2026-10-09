@@ -13,6 +13,7 @@ const UI_COPY = {
     searchPageTitle: "Wyszukiwanie w SGKP", chatPageTitle: "Konwersacja o treści SGKP", browsePageTitle: "Przeglądanie haseł SGKP",
     searchFiltersAria: "Filtry wyszukiwania", searchTab: "Wyszukiwanie", chatTab: "Konwersacja", browseTab: "Przeglądanie",
     browseHeading: "Przeglądanie haseł", browseVolume: "Tom", browseAllVolumes: "Wybierz tom",
+    browseName: "Nazwa", browseNamePlaceholder: "Nazwa lub fragment nazwy", browseNameEmpty: "Brak haseł o podanej nazwie w tym tomie.",
     browseLoading: "Wczytuję hasła…", browseInitial: "Wybierz tom, aby wyświetlić listę haseł.", browseRange: "Hasła {start}–{end} z {total}", browseEmpty: "Brak haseł w tym tomie.", browsePages: "Strony listy haseł", browseViewLabel: "Widok haseł", browseListView: "Widok listy", browseGridView: "Widok siatki", firstPage: "Początek", lastPage: "Koniec",
     collectiveKind: "Hasło zbiorcze", showSubentries: "Pokaż podhasła", hideSubentries: "Ukryj podhasła",
     loadingSubentries: "Wczytuję podhasła…", noSubentries: "To hasło nie zawiera podhaseł.", subentriesTitle: "Podhasła",
@@ -42,6 +43,7 @@ const UI_COPY = {
     verifyAnswers: "Odpowiedzi generowane automatycznie należy weryfikować w przywołanych hasłach.",
     helpTitle: "Jak korzystać z SGKP?", aboutApp: "O aplikacji", aboutText: "Aplikacja udostępnia hasła z 16 tomów Słownika Geograficznego Królestwa Polskiego i innych krajów słowiańskich. Tekst pochodzi z odczytu OCR; przy każdym wyniku można otworzyć skan strony źródłowej. Obecna wersja aplikacji jest prototypem, mogą występować problemy i częste zmiany w sposobie działania aplikacji. Dane dostępne w aplikacji (tekst SGKP i metadane) również są modyfikowane w wyniku trwającej weryfikacji błędów.",
     helpSearchTitle: "Wyszukiwanie", helpSearchText: "Wpisz nazwę albo wyrażenie i wybierz tryb: pełnotekstowy, hybrydowy lub semantyczny. Filtry pozwalają zawęzić wyniki do tomów, powiatów i miejscowości. Kliknij nazwę wyniku, aby przeczytać całe hasło.",
+    helpChatTimeLimit: "Serwer może przerwać obsługę pytania, jeśli przetwarzanie trwa dłużej niż 5 minut (300 sekund). Limit obejmuje wyszukiwanie źródeł, ich weryfikację i przygotowanie odpowiedzi. W takim przypadku spróbuj ponownie lub zawęź zakres pytania.",
     helpChatTitle: "Konwersacja", helpChatText: "Zadaj pytanie o treść słownika. Odpowiedź powstaje na podstawie odnalezionych fragmentów haseł i zawiera odsyłacze do wykorzystanych źródeł. Otwórz cytowane hasła, aby sprawdzić odpowiedź. Możesz zadać pytanie doprecyzowujące odnoszące się do poprzednich odpowiedzi. „Pobierz PDF” zapisuje bieżącą konwersację wraz ze źródłami; „Wyczyść rozmowę” usuwa ją z tej karty przeglądarki. Gdy model lokalny jest niedostępny, pytanie, krótka historia rozmowy i znalezione fragmenty są przesyłane do OpenAI; aplikacja oznacza taką odpowiedź. Konwersacja nie służy do sporządzania pełnych zestawień wszystkich miejscowości.",
     closeHelp: "Zamknij pomoc", dictionaryEntry: "Hasło słownikowe", openScan: "Otwórz skan strony", scan: "Skan",
     closeEntry: "Zamknij hasło", entryMetadata: "Metadane hasła", entryType: "Typ", localityType: "Typ miejscowości",
@@ -50,8 +52,11 @@ const UI_COPY = {
     industry: "Przemysł", mills: "Młyny", archaeology: "Archeologia", nameVariants: "Warianty nazw",
     yes: "Tak", no: "Nie", collectiveEntry: "Hasło zbiorcze: {name}", openCollective: "Otwórz hasło zbiorcze",
     searching: "Wyszukiwanie…", rankingScore: "Ocena trafności",
+    chatContextTruncated: "Osiągnięto limit długości kontekstu. Część zaakceptowanych źródeł została skrócona lub pominięta.",
     chatVerifyIncomplete: "Limit czasu weryfikacji został osiągnięty. Odpowiedź opiera się na dotychczas zaakceptowanych źródłach.",
-    chatVerifyHint: "(Uwaga: wydłuża przygotowanie odpowiedzi)",
+    deeperAnalysis: "Pogłębiona analiza",
+    deeperAnalysisTooltip: "Włącza dodatkowe rozumowanie modelu podczas przygotowywania końcowej odpowiedzi. Może pomóc przy złożonych pytaniach, ale nie gwarantuje większej poprawności.",
+    chatVerifyHint: "(wydłuża przygotowanie odpowiedzi)",
     verifyResults: "Dodatkowa weryfikacja wyników", verifyHint: "Uwaga: wydłuża wyszukiwanie",
     searchingVerified: "Wyszukuję i weryfikuję wyniki — proszę czekać…",
     verifiedCount: "Zaakceptowane wyniki: {count}", verificationIncomplete: "Weryfikacja nie została ukończona. Możesz kontynuować na następnej stronie.",
@@ -71,6 +76,8 @@ const UI_COPY = {
     communeMatches: "Znaleziono {count} nazw; na liście widać pierwsze 100.",
     chatPhase1: "Analizuję pytanie i kontekst rozmowy…", chatPhase2: "Przeszukuję hasła i fragmenty źródłowe…",
     chatPhase3: "Dobieram źródła odnoszące się do pytania…", chatPhase4: "Przekazuję wybrane fragmenty modelowi do opracowania odpowiedzi…",
+    answerPreparationTime: "Czas przygotowania odpowiedzi: {seconds} s",
+    chatSupplementarySearch: "Wyszukuję dodatkowe źródła, aby uzupełnić odpowiedź…",
     chatPhaseWait: "Model analizuje źródła. Dłuższa odpowiedź może wymagać chwili…",
     chatUnavailable: "Usługa konwersacji jest niedostępna", noStream: "Brak strumienia odpowiedzi",
     openaiGenerating: "OpenAI generuje odpowiedź…", retryGenerating: "Ponowiona próba generuje odpowiedź…",
@@ -95,6 +102,7 @@ const UI_COPY = {
     searchPageTitle: "Search SGKP", chatPageTitle: "Conversation about SGKP", browsePageTitle: "Browse SGKP entries",
     searchFiltersAria: "Search filters", searchTab: "Search", chatTab: "Conversation", browseTab: "Browse entries",
     browseHeading: "Browse entries", browseVolume: "Volume", browseAllVolumes: "Select a volume",
+    browseName: "Name", browseNamePlaceholder: "Name or part of a name", browseNameEmpty: "No matching entry names in this volume.",
     browseLoading: "Loading entries…", browseInitial: "Select a volume to browse its entries.", browseRange: "Entries {start}–{end} of {total}", browseEmpty: "No entries in this volume.", browsePages: "Entry list pages", browseViewLabel: "Entry view", browseListView: "List view", browseGridView: "Grid view", firstPage: "First", lastPage: "Last",
     collectiveKind: "Collective entry", showSubentries: "Show subentries", hideSubentries: "Hide subentries",
     loadingSubentries: "Loading subentries…", noSubentries: "This entry has no subentries.", subentriesTitle: "Subentries",
@@ -124,6 +132,7 @@ const UI_COPY = {
     verifyAnswers: "Automatically generated answers should be checked against the cited entries.",
     helpTitle: "How to use SGKP?", aboutApp: "About the application", aboutText: "This application provides entries from all 16 volumes of the Geographical Dictionary of the Kingdom of Poland and Other Slavic Countries. The text comes from OCR; each result links to a scan of the source page. The current version of the application is a prototype, so issues may occur and the way the application works may change frequently. The data available in the application (the SGKP text and metadata) are also subject to change as part of the ongoing error verification process.",
     helpSearchTitle: "Searching", helpSearchText: "Enter a name or phrase and choose full-text, hybrid, or semantic search. Filters can narrow results by volume, district, and locality. Select a result title to read the full entry.",
+    helpChatTimeLimit: "The server may interrupt a request if processing takes longer than 5 minutes (300 seconds). This limit includes source retrieval, verification, and answer generation. If this happens, try again or narrow the scope of your question.",
     helpChatTitle: "Conversation", helpChatText: "Ask a question about the dictionary. Answers are based on retrieved entry passages and include citations to the sources. Open cited entries to verify an answer. You can ask follow-up questions about earlier answers. “Download PDF” saves the conversation with its sources; “Clear conversation” removes it from this browser tab. If the local model is unavailable, the current question, a short conversation history, and retrieved passages are sent to OpenAI; the application identifies answers generated this way. The conversation is not intended to produce exhaustive lists of every locality.",
     closeHelp: "Close help", dictionaryEntry: "Dictionary entry", openScan: "Open page scan", scan: "Scan",
     closeEntry: "Close entry", entryMetadata: "Entry metadata", entryType: "Type", localityType: "Settlement type",
@@ -132,8 +141,11 @@ const UI_COPY = {
     industry: "Industry", mills: "Mills", archaeology: "Archaeology", nameVariants: "Name variants",
     yes: "Yes", no: "No", collectiveEntry: "Collective entry: {name}", openCollective: "Open collective entry",
     searching: "Searching…", rankingScore: "Relevance score",
+    chatContextTruncated: "The input length limit was reached. Some accepted sources were shortened or omitted.",
     chatVerifyIncomplete: "The verification time limit was reached. The answer uses the sources accepted so far.",
-    chatVerifyHint: "(Note: increases answer preparation time)",
+    deeperAnalysis: "Deeper analysis",
+    deeperAnalysisTooltip: "Enables additional model reasoning when preparing the final answer. It may help with complex questions, but does not guarantee greater accuracy.",
+    chatVerifyHint: "(increases answer preparation time)",
     verifyResults: "Additional result verification", verifyHint: "Note: increases search time",
     searchingVerified: "Searching and verifying results — please wait…",
     verifiedCount: "Accepted results: {count}", verificationIncomplete: "Verification was not completed. You can continue on the next page.",
@@ -153,6 +165,8 @@ const UI_COPY = {
     communeMatches: "Found {count} names; showing the first 100.",
     chatPhase1: "Analyzing the question and conversation context…", chatPhase2: "Searching entries and source passages…",
     chatPhase3: "Selecting sources relevant to the question…", chatPhase4: "Sending selected passages to the model…",
+    answerPreparationTime: "Answer preparation time: {seconds} s",
+    chatSupplementarySearch: "Searching for additional sources to supplement the answer…",
     chatPhaseWait: "The model is reviewing the sources. A longer answer may take a moment…",
     chatUnavailable: "The conversation service is unavailable", noStream: "No response stream was received",
     openaiGenerating: "OpenAI is generating the answer…", retryGenerating: "The model is generating a retry…",
@@ -175,7 +189,8 @@ const UI_COPY = {
 let currentLanguage = "pl";
 const state = { page: 1, hasNext: false, entry: null, highlight: null, request: 0, gminas: [], chatBusy: false,
   chatController: null, chatGeneration: 0, chatHistory: [], exportTurns: [], searchData: null, searchOffsets: {},
-  browsePage: 1, browseHasNext: false, browseData: null, browseRequest: 0, browseView: "list", showParentContext: true };
+  browsePage: 1, browseHasNext: false, browseData: null, browseRequest: 0, browseView: "list", showParentContext: true,
+  filtersCollapsed: window.matchMedia("(max-width: 760px)").matches };
 
 function setText(node, value) { node.textContent = value == null ? "" : String(value); }
 function t(key, values = {}) {
@@ -186,7 +201,7 @@ function displayVolume(value) {
   const number = Number.parseInt(value, 10);
   if (!Number.isFinite(number)) return value || "—";
   if (number === 15) return `15 ${t("volumePart1")}`;
-  if (number === 16) return `16 ${t("volumePart2")}`;
+  if (number === 16) return `15 ${t("volumePart2")}`;
   return String(number);
 }
 function applyLanguage(language, persist = false) {
@@ -200,6 +215,7 @@ function applyLanguage(language, persist = false) {
       node.replaceChildren(document.createTextNode(first), document.createElement("br"), document.createTextNode(rest.join(" ")));
     } else setText(node, value);
   });
+  document.querySelectorAll("[data-preparation-seconds]").forEach(renderPreparationTime);
   document.querySelectorAll("[data-i18n-placeholder]").forEach(node => node.placeholder = t(node.dataset.i18nPlaceholder));
   document.querySelectorAll("[data-i18n-aria]").forEach(node => node.setAttribute("aria-label", t(node.dataset.i18nAria)));
   document.querySelectorAll("[data-i18n-title]").forEach(node => node.title = t(node.dataset.i18nTitle));
@@ -316,10 +332,19 @@ function activeFilters() {
 }
 function updateFilterToggleLabel() {
   const count = Object.keys(activeFilters()).length;
-  const expanded = $("search-filter-slot").classList.contains("expanded");
-  $("mobile-filter-toggle").firstChild.textContent = (expanded ? t("mobileHideFilters") : t("mobileShowFilters")) + (count ? " (" + count + ")" : "") + " ";
-  $("assistant-filter-label").hidden = count > 0;
-  setText($("assistant-filter-hint"), count ? t("filtersActive", {count}) : t("limitAnswer"));
+  const expanded = !state.filtersCollapsed;
+  document.querySelectorAll(".filter-workspace").forEach(workspace =>
+    workspace.classList.toggle("filters-collapsed", !expanded));
+  document.querySelectorAll("[data-filter-toggle]").forEach(button => {
+    button.setAttribute("aria-expanded", String(expanded));
+    const label = expanded ? t("mobileHideFilters") : t("mobileShowFilters");
+    button.setAttribute("aria-label", label);
+    button.title = label;
+    setText(button.querySelector(".filter-toggle-icon"), expanded ? "‹" : "›");
+    setText(button.querySelector(".filter-toggle-label"),
+      t("filters") + (count ? " (" + count + ")" : ""));
+  });
+  $("filter-panel").hidden = !expanded;
 }
 function updateLocalityUi(clear = false) {
   const enabled = localityOnly();
@@ -632,17 +657,21 @@ function renderBrowseResults(data) {
     }
   } else {
     setText($("browse-status"), t("noResults"));
-    $("browse-results").append(makeEmpty(t("browseEmpty"), ""));
+    $("browse-results").append(makeEmpty(t(data.name ? "browseNameEmpty" : "browseEmpty"), ""));
   }
 }
 async function loadBrowse(page = 1) {
+  clearTimeout(state.browseFilterTimer);
   const current = ++state.browseRequest;
   state.browseData = null;
   setText($("browse-status"), t("browseLoading"));
+  $("browse-status").classList.remove("error");
   $("browse-results").replaceChildren();
   $("browse-pagination").hidden = true;
   $("browse-pagination-top").hidden = true;
   const params = new URLSearchParams({tom: $("browse-volume").value, page: String(page)});
+  const name = $("browse-name").value.trim();
+  if (name) params.set("name", name);
   try {
     const data = await api("api/v1/browse?" + params);
     if (current !== state.browseRequest) return;
@@ -927,7 +956,7 @@ async function askChat(question, filters, history, answerNode, sourcesNode, stat
     const response = await fetch("api/v1/chat", {
       method: "POST",
       headers: {"Content-Type": "application/json", "Accept": "text/event-stream"},
-      body: JSON.stringify({question, filters, history, language: currentLanguage, verify: $("chat-verify-results").checked}), signal
+      body: JSON.stringify({question, filters, history, language: currentLanguage, verify: $("chat-verify-results").checked, deeper_analysis: $("chat-deeper-analysis").checked}), signal
     });
     if (!response.ok) {
       throw new Error(await responseError(response, "conversationServiceUnavailable"));
@@ -947,7 +976,11 @@ async function askChat(question, filters, history, answerNode, sourcesNode, stat
         const raw = event.match(/^data: (.+)$/m)?.[1];
         if (!raw) continue;
         const data = JSON.parse(raw);
-        if (type === "delta") {
+        if (type === "progress") {
+          clearInterval(progressTimer);
+          setText(statusNode, data.phase === "supplementary_search" ? t("chatSupplementarySearch") : t("chatPhase4"));
+        }
+        else if (type === "delta") {
           if (!gotFirstDelta) {
             clearInterval(progressTimer);
             setText(statusNode, provider === "openai" ? t("openaiGenerating")
@@ -1000,23 +1033,34 @@ async function askChat(question, filters, history, answerNode, sourcesNode, stat
     clearInterval(progressTimer);
   }
 }
+function renderPreparationTime(node) {
+  const seconds = Number(node.dataset.preparationSeconds);
+  setText(node, t("answerPreparationTime", {seconds: new Intl.NumberFormat(
+    currentLanguage === "en" ? "en-GB" : "pl-PL", {
+      minimumFractionDigits: 1, maximumFractionDigits: 1
+    }).format(seconds)}));
+}
 function makeTurn(question) {
   const turn = element("article", undefined, "turn");
   turn.append(element("div", question, "question-bubble"));
   const card = element("div", undefined, "answer-card");
-  card.append(element("h2", t("answerHeading")));
+  const header = element("div", undefined, "answer-header");
+  header.append(element("h2", t("answerHeading")));
   const status = element("p", t("chatPhase1"), "answer-status is-working");
   status.setAttribute("role", "status");
   status.setAttribute("aria-live", "polite");
   status.setAttribute("aria-atomic", "true");
   const answer = element("div", undefined, "answer-text");
+  const timing = element("p", undefined, "answer-timing");
+  timing.hidden = true;
+  header.append(timing);
   const heading = element("p", t("sourcesHeading"), "source-heading");
   heading.hidden = true;
   const sources = element("ol", undefined, "source-list");
-  card.append(status, answer, heading, sources);
+  card.append(header, status, answer, heading, sources);
   turn.append(card);
   $("conversation").append(turn);
-  return {turn, status, answer, heading, sources};
+  return {turn, status, answer, timing, heading, sources};
 }
 function clearChat() {
   state.chatGeneration++;
@@ -1088,7 +1132,13 @@ async function submitChat(event) {
       sources: (result.sources || []).map(source => ({citation: source.citation, nazwa: source.nazwa,
         tom: source.tom, strona: source.strona}))});
     setText(nodes.status, [result.provider === "openai" ? t("openaiAnswerNotice", {model: result.model}) : "",
-      result.verification_incomplete ? t("chatVerifyIncomplete") : ""].filter(Boolean).join(" "));
+      result.verification_incomplete ? t("chatVerifyIncomplete") : "",
+      result.context_truncated ? t("chatContextTruncated") : ""].filter(Boolean).join(" "));
+    if (Number.isFinite(result.processing_seconds) && result.processing_seconds >= 0) {
+      nodes.timing.dataset.preparationSeconds = String(result.processing_seconds);
+      renderPreparationTime(nodes.timing);
+      nodes.timing.hidden = false;
+    }
     nodes.status.classList.remove("is-working");
     nodes.heading.hidden = !nodes.sources.children.length;
     $("question").value = "";
@@ -1145,6 +1195,17 @@ async function initialize() {
   $("prev").addEventListener("click", () => search(state.page - 1));
   $("next").addEventListener("click", () => search(state.page + 1));
   $("browse-volume").addEventListener("change", () => loadBrowse(1));
+  $("browse-filters").addEventListener("submit", event => {
+    event.preventDefault();
+    loadBrowse(1);
+  });
+  $("browse-name").addEventListener("input", () => {
+    clearTimeout(state.browseFilterTimer);
+    ++state.browseRequest;
+    $("browse-pagination").hidden = true;
+    $("browse-pagination-top").hidden = true;
+    state.browseFilterTimer = setTimeout(() => loadBrowse(1), 300);
+  });
   $("browse-view-list").addEventListener("click", () => setBrowseView("list"));
   $("browse-view-grid").addEventListener("click", () => setBrowseView("grid"));
   $("browse-first-top").addEventListener("click", () => loadBrowse(1));
@@ -1155,12 +1216,13 @@ async function initialize() {
   $("browse-prev").addEventListener("click", () => loadBrowse(state.browsePage - 1));
   $("browse-next").addEventListener("click", () => loadBrowse(state.browsePage + 1));
   $("browse-last").addEventListener("click", () => loadBrowse(Math.ceil(state.browseData.estimated_total_hits / state.browseData.page_size)));
-  $("clear-filters").addEventListener("click", clearFilters);
-  $("mobile-filter-toggle").addEventListener("click", () => {
-    const expanded = $("search-filter-slot").classList.toggle("expanded");
-    $("mobile-filter-toggle").setAttribute("aria-expanded", String(expanded));
-    updateFilterToggleLabel();
-  });
+  document.querySelectorAll("[data-clear-filters]").forEach(button =>
+    button.addEventListener("click", clearFilters));
+  document.querySelectorAll("[data-filter-toggle]").forEach(button =>
+    button.addEventListener("click", () => {
+      state.filtersCollapsed = !state.filtersCollapsed;
+      updateFilterToggleLabel();
+    }));
   $("gmina-search").addEventListener("input", () => {
     const hadSelection = Boolean($("gmina").value);
     $("gmina").value = "";

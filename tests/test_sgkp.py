@@ -77,6 +77,33 @@ class SourceTests(unittest.TestCase):
 
 
 class ApiTests(unittest.TestCase):
+    def test_browse_name_filter_matches_substring_before_pagination(self):
+        entries = tuple({"ID": f"01-{i:05d}", "nazwa": "Żyrardów Wielki",
+                         "tom": "01", "strona": 42} for i in range(53)) + (
+            {"ID": "01-00054", "nazwa": "Inna miejscowość", "preview": "Żyrardów",
+             "tom": "01", "strona": 43},)
+        with patch.object(web, "cached_browse_entries", return_value=entries) as cached:
+            first = self.client.get("/api/v1/browse", query_string={
+                "tom": "01", "name": "  ŻYRARD  "}).json
+            second = self.client.get("/api/v1/browse", query_string={
+                "tom": "01", "name": "żyrard", "page": 2}).json
+            self.assertEqual(cached.call_args.args[2], "01")
+            self.assertEqual(first["estimated_total_hits"], 53)
+            self.assertEqual(len(first["hits"]), 50)
+            self.assertTrue(first["has_next"])
+            self.assertEqual([hit["ID"] for hit in second["hits"]],
+                             ["01-00050", "01-00051", "01-00052"])
+            self.assertFalse(second["has_next"])
+            self.assertEqual(self.client.get("/api/v1/browse", query_string={
+                "name": "Nieistniejąca"}).json["estimated_total_hits"], 0)
+            self.assertEqual(self.client.get("/api/v1/browse", query_string={
+                "name": " "}).json["estimated_total_hits"], 54)
+
+    def test_browse_rejects_overlong_name(self):
+        with patch.object(web, "cached_browse_entries", return_value=()):
+            response = self.client.get("/api/v1/browse", query_string={"name": "a" * 301})
+        self.assertEqual(response.status_code, 400)
+
     def setUp(self):
         self.client = web.app.test_client()
         self.manifest_patch = patch.object(web, "manifest", return_value={
@@ -84,10 +111,9 @@ class ApiTests(unittest.TestCase):
             "source_dir": "/tmp", "lookup_db": "/tmp/lookup.sqlite",
         })
         self.manifest_patch.start()
-        self.district_patch = patch.object(web, "model_question_district", return_value=None)
-        self.district_patch.start()
-        self.subjects_patch = patch.object(web, "model_named_subjects",
-                                           side_effect=web.names_in_question)
+        self.subjects_patch = patch.object(web, "model_interpret_question",
+            side_effect=lambda question, config, history, **kwargs: {
+                "names": web.names_in_question(question), "district": None, "many_localities": False})
         self.subjects_patch.start()
         self.metadata_plan_patch = patch.object(web, "model_metadata_searches", return_value=[])
         self.metadata_plan_patch.start()
@@ -97,7 +123,6 @@ class ApiTests(unittest.TestCase):
         self.selection_patch.start()
 
     def tearDown(self):
-        self.district_patch.stop()
         self.selection_patch.stop()
         self.metadata_plan_patch.stop()
         self.subjects_patch.stop()
@@ -107,12 +132,12 @@ class ApiTests(unittest.TestCase):
         self.subjects_patch.stop()
         with patch.object(web.Chat, "answer",
                           return_value='{"names":["warmbrunn"]}') as answer:
-            names = web.model_named_subjects("Czym wyróżniało się warmbrunn?")
+            names = web.model_interpret_question("Czym wyróżniało się warmbrunn?", {}, [])["names"]
         self.assertEqual(names, ["warmbrunn"])
         self.assertEqual(answer.call_count, 1)
         with patch.object(web.Chat, "answer",
                           return_value='{"names":["Nieobecna","warmbrunn"]}'):
-            self.assertEqual(web.model_named_subjects("Czym wyróżniało się warmbrunn?"),
+            self.assertEqual(web.model_interpret_question("Czym wyróżniało się warmbrunn?", {}, [])["names"],
                              ["warmbrunn"])
 
     def test_lowercase_name_is_used_for_named_retrieval(self):
@@ -214,6 +239,100 @@ class ApiTests(unittest.TestCase):
         self.assertNotIn("nazwa=Uzdrowisko 21", answer.call_args.args[0][1]["content"])
         self.assertEqual(response.json["sources"][0]["strona"], 42)
 
+    def test_supplement_continues_same_vector_skips_assessed_and_streams_progress(self):
+        self.selection_patch.stop()
+        first = [{"passage_id": f"01-{i:05d}_p0001", "entry_id": f"01-{i:05d}",
+                  "nazwa": f"Village {i}", "tom": "01", "strona": 42,
+                  "text": "accepted" if i == 0 else "unrelated"} for i in range(50)]
+        another_passage = {**first[0], "passage_id": "01-00000_p0002", "text": "accepted additional evidence"}
+        new_entry = {**first[0], "passage_id": "01-00051_p0001", "entry_id": "01-00051"}
+        extra = [first[0], first[1], another_passage, new_entry]
+        def search_result(index, payload):
+            return {"hits": extra if payload.get("offset") == 50 else first}
+        for streaming in (False, True):
+            with patch.object(web, "manifest", return_value={"passages_index": "passages",
+                     "entries_index": "entries", "vectors": True}), \
+                 patch.object(web, "model_interpret_question", return_value={
+                     "names": [], "district": None, "many_localities": True}), \
+                 patch.object(web.Embeddings, "embed", return_value=[[0.2, 0.3]]) as embedding, \
+                 patch.object(web.Meili, "search", side_effect=search_result) as search, \
+                 patch.object(web.RelevanceDiagnostic, "assess", side_effect=lambda q, hit, *a, **kw:
+                    {"score": 0.9 if hit["text"].startswith("accepted") else 0.1,
+                     "would_reject": not hit["text"].startswith("accepted")}) as assess, \
+                 patch.object(web.Chat, "answer", return_value="Answer [1][2]."), \
+                 patch.object(web.Chat, "stream", return_value=iter(["Answer [1][2]."])):
+                response = self.client.post("/api/v1/chat", json={"question": "Pytanie?", "verify": True},
+                     headers={"Accept": "text/event-stream"} if streaming else {})
+                content = response.get_data(as_text=True)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(embedding.call_count, 1)
+            self.assertEqual(search.call_count, 2)
+            original, supplementary = [call.args[1] for call in search.call_args_list]
+            self.assertEqual(supplementary, {**original, "offset": 50})
+            self.assertEqual(assess.call_count, 52)
+            if streaming:
+                self.assertIn('"phase": "supplementary_search"', content)
+                self.assertLess(content.index("event: progress"), content.index("event: answer"))
+            else:
+                self.assertTrue(response.json["supplementary_search"])
+                self.assertEqual(len(response.json["sources"]), 2)
+                self.assertEqual(len(response.json["sources"][0]["passage_ids"]), 2)
+
+    def test_single_place_does_not_fetch_second_semantic_batch(self):
+        self.selection_patch.stop()
+        first = [{"passage_id": f"01-{i:05d}_p0001", "entry_id": f"01-{i:05d}",
+                  "nazwa": f"Village {i}", "tom": "01", "strona": 42, "text": "Evidence"}
+                 for i in range(50)]
+        with patch.object(web, "manifest", return_value={"passages_index": "passages", "vectors": True}), \
+             patch.object(web, "model_interpret_question", return_value={
+                 "names": [], "district": None, "many_localities": False}) as classifier, \
+             patch.object(web.Embeddings, "embed", return_value=[[0.2, 0.3]]), \
+             patch.object(web.Meili, "search", return_value={"hits": first}) as search, \
+             patch.object(web.RelevanceDiagnostic, "assess", side_effect=lambda q, hit, *a, **kw:
+                 {"score": 0.9 if hit["entry_id"] == "01-00000" else 0.1,
+                  "would_reject": hit["entry_id"] != "01-00000"}), \
+             patch.object(web.Chat, "answer", return_value="Answer [1]."):
+            response = self.client.post("/api/v1/chat", json={"question": "Pytanie?", "verify": True})
+        self.assertEqual(response.status_code, 200)
+        classifier.assert_called_once()
+        self.assertEqual(search.call_count, 1)
+        self.assertFalse(response.json["supplementary_search"])
+
+    def test_deeper_analysis_overrides_final_qwen_for_json_and_stream(self):
+        hit = {"passage_id": "01-00001_p0001", "entry_id": "01-00001", "nazwa": "Village",
+               "tom": "01", "strona": 42, "text": "Evidence."}
+        actual_chat = web.Chat
+        for streaming in (False, True):
+            for enabled in (False, True, None):
+                body = {"question": "Question?", "verify": False}
+                if enabled is not None:
+                    body["deeper_analysis"] = enabled
+                with patch.object(web.Meili, "search", return_value={"hits": [hit]}), \
+                     patch.object(actual_chat, "answer", return_value="Answer [1]."), \
+                     patch.object(actual_chat, "stream", return_value=iter(["Answer [1]."])), \
+                     patch.object(web, "Chat", wraps=actual_chat) as constructor:
+                    response = self.client.post("/api/v1/chat", json=body,
+                        headers={"Accept": "text/event-stream"} if streaming else {})
+                    response.get_data()
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(constructor.call_args.kwargs["enable_thinking"], enabled is True)
+
+    def test_verified_chat_sends_more_than_twenty_fragments_including_one_entry(self):
+        self.selection_patch.stop()
+        candidates = [{"passage_id": f"01-00001_p{i:04d}", "entry_id": "01-00001",
+                       "nazwa": "Village", "tom": "01", "strona": 42,
+                       "text": "Evidence " * 200 + f"END{i}"} for i in range(30)]
+        with patch.object(web.Meili, "search", return_value={"hits": candidates}), \
+             patch.object(web.RelevanceDiagnostic, "assess", return_value={
+                 "score": 0.9, "would_reject": False}), \
+             patch.object(web.Chat, "answer", return_value="Answer [1].") as answer:
+            response = self.client.post("/api/v1/chat", json={
+                "question": "Question?", "verify": True, "diagnostics": True})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json["retrieved_passage_ids"]), 30)
+        self.assertIn("END29", answer.call_args.args[0][1]["content"])
+        self.assertEqual(len(response.json["sources"]), 1)
+
     def test_generic_chat_selects_evidence_from_description_not_place_name(self):
         self.selection_patch.stop()
         misleading = {"passage_id": "14-05196_p0001", "entry_id": "14-05196",
@@ -292,18 +411,44 @@ class ApiTests(unittest.TestCase):
             self.assertEqual(web.model_metadata_searches("Gdzie znajdowały się młyny?"),
                              [("młyny", "młyn wodny")])
 
-    def test_district_model_accepts_only_existing_value_and_fails_open(self):
-        self.district_patch.stop()
+    def test_interpretation_validates_fields_independently_and_fails_open(self):
+        self.subjects_patch.stop()
+        config = {"source_dir": "/tmp"}
+        question = "Co wiadomo o Okuniewie w powiecie warszawskim?"
         with patch.object(web, "cached_filter_options", return_value={
                 "powiat_ujednolicony": ["warszawski", "wileński"]}), \
              patch.object(web, "preliminary_chat_answer", side_effect=[
-                 '{"district":"warszawski"}', '{"district":"nieznany"}',
-                 '{"district":null}', 'invalid JSON',
-                 ServiceError("chat", message="timeout")]):
-            config = {"source_dir": "/tmp"}
-            self.assertEqual(web.model_question_district("W powiecie warszawskim", config), "warszawski")
-            for _ in range(4):
-                self.assertIsNone(web.model_question_district("Pytanie", config))
+                 '{"names":["Okuniewie","Nieobecna"],"district":"warszawski","many_localities":false}',
+                 '{"names":"invalid","district":"warszawski","many_localities":true}',
+                 '{"names":["Okuniewie"],"district":"nieznany","many_localities":"true"}',
+                 'invalid JSON', ServiceError("chat", message="timeout")]) as model:
+            result = web.model_interpret_question(question, config, [])
+            self.assertEqual(result, {"names": ["Okuniewie"], "district": "warszawski",
+                                      "many_localities": False})
+            model.assert_called_once()
+            result = web.model_interpret_question(question, config, [])
+            self.assertEqual(result["district"], "warszawski")
+            self.assertTrue(result["many_localities"])
+            result = web.model_interpret_question(question, config, [])
+            self.assertEqual(result["names"], ["Okuniewie"])
+            self.assertIsNone(result["district"])
+            self.assertFalse(result["many_localities"])
+            for _ in range(2):
+                result = web.model_interpret_question(question, config, [])
+                self.assertIsNone(result["district"])
+                self.assertFalse(result["many_localities"])
+
+    def test_interpretation_skips_county_list_for_manual_scope(self):
+        self.subjects_patch.stop()
+        with patch.object(web, "cached_filter_options") as options, \
+             patch.object(web, "preliminary_chat_answer", return_value=
+                 '{"names":[],"district":"warszawski","many_localities":true}') as model:
+            result = web.model_interpret_question("Gdzie były młyny?", {}, [],
+                                                  resolve_district=False)
+        options.assert_not_called()
+        model.assert_called_once()
+        self.assertIsNone(result["district"])
+        self.assertTrue(result["many_localities"])
 
     def test_archeo_available_to_planner_and_source_prompt(self):
         self.metadata_plan_patch.stop()
@@ -340,7 +485,8 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(len(selected), 1)
 
     def test_question_district_filters_retrieval_and_preserves_manual_filter(self):
-        with patch.object(web, "model_question_district", return_value="warszawski") as district, \
+        with patch.object(web, "model_interpret_question", return_value={
+                "names": [], "district": "warszawski", "many_localities": True}) as district, \
              patch.object(web.Meili, "search", return_value={"hits": []}) as search:
             response = self.client.post("/api/v1/chat", json={
                 "question": "Jakie znaleziska były w powiecie warszawskim?"})
@@ -352,7 +498,7 @@ class ApiTests(unittest.TestCase):
                 "question": "Jakie znaleziska były w powiecie warszawskim?",
                 "filters": {"powiat_ujednolicony": "wileński"}})
             self.assertEqual(response.status_code, 200)
-            district.assert_not_called()
+            self.assertFalse(district.call_args.kwargs["resolve_district"])
             self.assertIn('powiat_ujednolicony = "wileński"',
                           search.call_args.args[1]["filter"])
 
@@ -946,6 +1092,19 @@ class ApiTests(unittest.TestCase):
                 Chat().answer([{"role": "user", "content": "Gdzie?"}])
             self.assertEqual(plain.exception.message, "output_limit")
         self.assertEqual(post.call_args.kwargs["json"]["max_tokens"], 3000)
+
+    def test_request_thinking_override_uses_low_and_leaves_helpers_disabled(self):
+        with patch.dict("os.environ", {"QWEN_ENABLE_THINKING": "true",
+                                      "QWEN_REASONING_EFFORT": "xhigh"}, clear=True):
+            for enabled in (False, True):
+                chat = Chat(enable_thinking=enabled)
+                payload = chat.request_payload([], 100, stream=False)
+                self.assertEqual(payload["chat_template_kwargs"]["enable_thinking"], enabled)
+                self.assertEqual(payload.get("reasoning_effort"), "low" if enabled else None)
+                self.assertEqual(payload["temperature"], 1.0 if enabled else 0.7)
+            helper = Chat(preliminary=True, enable_thinking=True)
+            self.assertFalse(helper.enable_thinking)
+            self.assertEqual(helper.temperature, 0.3)
 
     def test_qwen_thinking_setting_applies_to_plain_and_streamed_requests(self):
         class FakeResponse:
