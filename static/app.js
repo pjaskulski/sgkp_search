@@ -228,6 +228,12 @@ function displayVolume(value) {
   if (number === 16) return `15 ${t("volumePart2")}`;
   return String(number);
 }
+function volumeValue(value) {
+  const text = String(value ?? "").trim();
+  const number = Number(text);
+  return /^\d{1,2}$/.test(text) && number >= 1 && number <= 16
+    ? String(number).padStart(2, "0") : text;
+}
 function applyLanguage(language, persist = false) {
   currentLanguage = language === "en" ? "en" : "pl";
   document.documentElement.lang = currentLanguage;
@@ -409,9 +415,10 @@ function restorePanelFilters(saved, browsing) {
     if (node.type === "checkbox" || node.type === "radio") {
       node.checked = previous ? previous.checked : node.type === "radio" && node.value === (browsing ? "all" : "only");
     } else {
-      const value = previous ? previous.value : node.id === "tom" && browsing ? "01" : "";
+      const restored = previous ? previous.value : node.id === "tom" && browsing ? "01" : "";
+      const value = node.id === "tom" ? volumeValue(restored) : restored;
       if (node.tagName === "SELECT" && value && !Array.from(node.options).some(option => option.value === value)) {
-        const option = element("option", value);
+        const option = element("option", node.id === "tom" ? displayVolume(value) : value);
         option.value = value;
         node.append(option);
       }
@@ -735,11 +742,17 @@ function renderNamedFilterChoices(id, values, allKey, matchesKey, hintKey) {
 }
 function fillSelect(id, values) {
   const select = $(id);
-  for (const value of values) {
+  const selected = id === "tom" ? volumeValue(select.value) : select.value;
+  const all = select.options[0];
+  select.replaceChildren(all);
+  const unique = [...new Set(values.map(value => id === "tom" ? volumeValue(value) : value))];
+  for (const value of unique) {
+    if (!value) continue;
     const option = element("option", id === "tom" ? displayVolume(value) : value);
     option.value = value;
     select.append(option);
   }
+  select.value = unique.includes(selected) ? selected : "";
 }
 async function loadFilterOptions() {
   try {
@@ -1289,7 +1302,7 @@ async function initialize() {
   if (params.has("candidate_offset")) state.searchOffsets[Number(params.get("page") || 1)] = Number(params.get("candidate_offset"));
   setText($("ratio-value"), $("ratio").value + "%");
   modeUi();
-  for (const id of optionFields) if (params.get(id)) $(id).value = params.get(id);
+  for (const id of optionFields) if (params.get(id)) $(id).value = id === "tom" ? volumeValue(params.get(id)) : params.get(id);
   if (params.get("gmina")) { $("gmina-search").value = params.get("gmina"); renderGminaChoices(); $("gmina").value = params.get("gmina"); }
   if (params.get("parafia_katolicka") && !$("parish-filter").hidden) { $("parafia_katolicka-search").value = params.get("parafia_katolicka"); renderParishChoices(); $("parafia_katolicka").value = params.get("parafia_katolicka"); }
   if (params.get("jest_miejscowoscia") === "true" || ["gmina", "parafia_katolicka", "gubernia_ujednolicona", "typ_punktu_osadniczego", "królestwo_polskie"].some(id => params.get(id))) {
