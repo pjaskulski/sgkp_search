@@ -170,6 +170,8 @@ def ingest(input_dir: Path, output_dir: Path, suffix: str, with_vectors: bool, e
         "entries_index": entries_index, "passages_index": passages_index,
         "lookup_db": str(lookup_path.resolve()), "counts": {"entries": entry_count, "passages": passage_count},
         "vectors": with_vectors, "embedding_model": embedding.model if embedding else None,
+        "presence_filters_version": 1,
+        "catholic_parish_filter_version": 1,
     }
     versioned_path = output_dir / f"manifest_{suffix}.json"
     versioned_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")

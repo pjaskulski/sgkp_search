@@ -13,7 +13,7 @@ const UI_COPY = {
     searchPageTitle: "Wyszukiwanie w SGKP", chatPageTitle: "Konwersacja o treści SGKP", browsePageTitle: "Przeglądanie haseł SGKP",
     searchFiltersAria: "Filtry wyszukiwania", searchTab: "Wyszukiwanie", chatTab: "Konwersacja", browseTab: "Przeglądanie",
     browseHeading: "Przeglądanie haseł", browseVolume: "Tom", browseAllVolumes: "Wybierz tom",
-    browseName: "Nazwa", browseNamePlaceholder: "Nazwa lub fragment nazwy", browseNameEmpty: "Brak haseł o podanej nazwie w tym tomie.",
+    browseName: "Nazwa", browseNamePlaceholder: "Nazwa lub fragment nazwy", browseNameEmpty: "Brak haseł o podanej nazwie spełniających filtry.",
     browseLoading: "Wczytuję hasła…", browseInitial: "Wybierz tom, aby wyświetlić listę haseł.", browseRange: "Hasła {start}–{end} z {total}", browseEmpty: "Brak haseł w tym tomie.", browsePages: "Strony listy haseł", browseViewLabel: "Widok haseł", browseListView: "Widok listy", browseGridView: "Widok siatki", firstPage: "Początek", lastPage: "Koniec",
     collectiveKind: "Hasło zbiorcze", showSubentries: "Pokaż podhasła", hideSubentries: "Ukryj podhasła",
     loadingSubentries: "Wczytuję podhasła…", noSubentries: "To hasło nie zawiera podhaseł.", subentriesTitle: "Podhasła",
@@ -25,10 +25,19 @@ const UI_COPY = {
     mobileHideFilters: "Ukryj filtry", narrowResults: "Zawęź wyniki", filters: "Filtry", clear: "Wyczyść",
     volume: "Tom", allVolumes: "Wszystkie tomy", district: "Powiat", allDistricts: "Wszystkie powiaty",
     entryScope: "Zakres haseł", allEntries: "Wszystkie hasła", placesOnly: "Tylko miejscowości",
+    informationFilters: "Informacje w haśle",
+    informationFiltersHint: "Wymagaj informacji o wszystkich zaznaczonych kategoriach. Brak adnotacji nie oznacza braku obiektu.",
+    presenceReligiousSites: "Obiekty sakralne", presenceSchools: "Szkoły", presenceMills: "Młyny",
+    presenceIndustry: "Zakłady przemysłowe", presenceMonuments: "Zabytki",
+    presenceArchaeology: "Znaleziska archeologiczne", presenceHealthcare: "Opieka zdrowotna",
+    presenceLibraries: "Biblioteki", presenceSpas: "Uzdrowiska",
     localityFilters: "Filtry miejscowości", localityAvailability: "Dostępne po wybraniu „Tylko miejscowości”.",
     kingdomOnly: "Tylko Królestwo Polskie", settlementType: "Typ miejscowości", allTypes: "Wszystkie typy",
     governorate: "Gubernia", allGovernorates: "Wszystkie gubernie", commune: "Gmina", findCommune: "Znajdź nazwę gminy",
     chooseCommune: "Wybierz gminę", allCommunes: "Wszystkie gminy", communeHint: "Wpisz fragment nazwy, potem wybierz gminę z listy.",
+    findParish: "Znajdź nazwę parafii", chooseParish: "Wybierz parafię",
+    allParishes: "Wszystkie parafie", parishHint: "Wpisz fragment nazwy, potem wybierz parafię z listy.",
+    parishMatches: "Pasujące parafie: {count}. Wybierz parafię z listy.",
     catalog: "Katalog haseł", searchResults: "Wyniki wyszukiwania", startSearch: "Wpisz zapytanie, aby rozpocząć.",
     startByName: "Zacznij od nazwy lub tematu", enterQuery: "Wprowadź zapytanie w polu powyżej.",
     pagesLabel: "Strony wyników", previous: "← Poprzednia", next: "Następna →", sourceFilters: "Filtry źródeł",
@@ -38,12 +47,15 @@ const UI_COPY = {
     exampleArchaeology: "Jakie znaleziska archeologiczne znajdowały się w miejscowościach powiatu warszawskiego?", exampleGlassworks: "W których miejscowościach znajdowały się huty szkła?",
     exampleOil: "Co słownik mówi o wydobyciu ropy naftowej w Borysławiu?", exampleKononowicze: "Co wiadomo o miejscowości Kononowicze w powiecie oszmiańskim?",
     exampleZyrardow: "Ilu robotników pracowało w zakładach Żyrardowa i jakie wyroby tam wytwarzano?", downloadPdf: "Pobierz PDF",
+    exampleReligiousCount: "W ilu hasłach pojawiają się informacje o obiektach sakralnych?",
     clearConversation: "Wyczyść rozmowę", yourQuestion: "Twoje pytanie",
     questionPlaceholder: "Zapytaj o miejscowość, osobę lub zagadnienie opisane w słowniku…", ask: "Zapytaj",
     verifyAnswers: "Odpowiedzi generowane automatycznie należy weryfikować w przywołanych hasłach.",
     helpTitle: "Jak korzystać z SGKP?", aboutApp: "O aplikacji", aboutText: "Aplikacja udostępnia hasła z 16 tomów Słownika Geograficznego Królestwa Polskiego i innych krajów słowiańskich. Tekst pochodzi z odczytu OCR; przy każdym wyniku można otworzyć skan strony źródłowej. Obecna wersja aplikacji jest prototypem, mogą występować problemy i częste zmiany w sposobie działania aplikacji. Dane dostępne w aplikacji (tekst SGKP i metadane) również są modyfikowane w wyniku trwającej weryfikacji błędów.",
     helpSearchTitle: "Wyszukiwanie", helpSearchText: "Wpisz nazwę albo wyrażenie i wybierz tryb: pełnotekstowy, hybrydowy lub semantyczny. Filtry pozwalają zawęzić wyniki do tomów, powiatów i miejscowości. Kliknij nazwę wyniku, aby przeczytać całe hasło.",
     helpChatTimeLimit: "Serwer może przerwać obsługę pytania, jeśli przetwarzanie trwa dłużej niż 5 minut (300 sekund). Limit obejmuje wyszukiwanie źródeł, ich weryfikację i przygotowanie odpowiedzi. W takim przypadku spróbuj ponownie lub zawęź zakres pytania.",
+    helpBrowseTitle: "Przeglądanie",
+    helpBrowseText: "Przeglądaj hasła indywidualne i elementy haseł zbiorczych w kolejności ich identyfikatorów, po 50 na stronie. Domyślnie wyświetlany jest tom 1 i wszystkie rodzaje haseł. W panelu po lewej wybierz tom lub wszystkie tomy, wpisz nazwę albo jej fragment i ustaw pozostałe filtry. Lista odświeża się po każdej zmianie; panel można zwinąć. W filtrach gminy i parafii katolickiej wpisz fragment nazwy, a następnie wybierz pozycję z listy. Możesz przełączać widok listy i siatki oraz korzystać z nawigacji na górze i dole listy. Kliknij nazwę, aby otworzyć treść i metadane hasła, albo link do skanu, aby zobaczyć stronę źródłową. Podhasła są oznaczone jako elementy haseł zbiorczych; ich tom i strona pochodzą z hasła zbiorczego. Filtry obecności informacji odnoszą się do adnotacji w metadanych — brak adnotacji nie dowodzi braku obiektu w miejscowości.",
     helpChatTitle: "Konwersacja", helpChatText: "Zadaj pytanie o treść słownika. Odpowiedź powstaje na podstawie odnalezionych fragmentów haseł i zawiera odsyłacze do wykorzystanych źródeł. Otwórz cytowane hasła, aby sprawdzić odpowiedź. Możesz zadać pytanie doprecyzowujące odnoszące się do poprzednich odpowiedzi. „Pobierz PDF” zapisuje bieżącą konwersację wraz ze źródłami; „Wyczyść rozmowę” usuwa ją z tej karty przeglądarki. Gdy model lokalny jest niedostępny, pytanie, krótka historia rozmowy i znalezione fragmenty są przesyłane do OpenAI; aplikacja oznacza taką odpowiedź. Konwersacja nie służy do sporządzania pełnych zestawień wszystkich miejscowości.",
     closeHelp: "Zamknij pomoc", dictionaryEntry: "Hasło słownikowe", openScan: "Otwórz skan strony", scan: "Skan",
     closeEntry: "Zamknij hasło", entryMetadata: "Metadane hasła", entryType: "Typ", localityType: "Typ miejscowości",
@@ -102,7 +114,7 @@ const UI_COPY = {
     searchPageTitle: "Search SGKP", chatPageTitle: "Conversation about SGKP", browsePageTitle: "Browse SGKP entries",
     searchFiltersAria: "Search filters", searchTab: "Search", chatTab: "Conversation", browseTab: "Browse entries",
     browseHeading: "Browse entries", browseVolume: "Volume", browseAllVolumes: "Select a volume",
-    browseName: "Name", browseNamePlaceholder: "Name or part of a name", browseNameEmpty: "No matching entry names in this volume.",
+    browseName: "Name", browseNamePlaceholder: "Name or part of a name", browseNameEmpty: "No entry names match the selected filters.",
     browseLoading: "Loading entries…", browseInitial: "Select a volume to browse its entries.", browseRange: "Entries {start}–{end} of {total}", browseEmpty: "No entries in this volume.", browsePages: "Entry list pages", browseViewLabel: "Entry view", browseListView: "List view", browseGridView: "Grid view", firstPage: "First", lastPage: "Last",
     collectiveKind: "Collective entry", showSubentries: "Show subentries", hideSubentries: "Hide subentries",
     loadingSubentries: "Loading subentries…", noSubentries: "This entry has no subentries.", subentriesTitle: "Subentries",
@@ -114,10 +126,19 @@ const UI_COPY = {
     mobileHideFilters: "Hide filters", narrowResults: "Refine results", filters: "Filters", clear: "Clear",
     volume: "Volume", allVolumes: "All volumes", district: "District", allDistricts: "All districts",
     entryScope: "Entry scope", allEntries: "All entries", placesOnly: "Localities only",
+    informationFilters: "Information in the entry",
+    informationFiltersHint: "Require information about all selected categories. Missing annotations do not establish absence.",
+    presenceReligiousSites: "Religious sites", presenceSchools: "Schools", presenceMills: "Mills",
+    presenceIndustry: "Industrial facilities", presenceMonuments: "Historic monuments",
+    presenceArchaeology: "Archaeological finds", presenceHealthcare: "Healthcare",
+    presenceLibraries: "Libraries", presenceSpas: "Spas",
     localityFilters: "Locality filters", localityAvailability: "Available after selecting “Localities only”.",
     kingdomOnly: "Kingdom of Poland only", settlementType: "Settlement type", allTypes: "All types",
     governorate: "Governorate", allGovernorates: "All governorates", commune: "Commune", findCommune: "Find a commune",
     chooseCommune: "Choose a commune", allCommunes: "All communes", communeHint: "Enter part of a name, then select a commune from the list.",
+    findParish: "Find a parish", chooseParish: "Choose a parish",
+    allParishes: "All parishes", parishHint: "Enter part of a name, then select a parish from the list.",
+    parishMatches: "Matching parishes: {count}. Select a parish from the list.",
     catalog: "Entry catalogue", searchResults: "Search results", startSearch: "Enter a query to begin.",
     startByName: "Start with a name or subject", enterQuery: "Enter a query in the field above.",
     pagesLabel: "Search result pages", previous: "← Previous", next: "Next →", sourceFilters: "Source filters",
@@ -127,12 +148,15 @@ const UI_COPY = {
     exampleArchaeology: "What archaeological finds were reported in localities in Warsaw County?", exampleGlassworks: "Which localities had glassworks?",
     exampleOil: "What does the dictionary say about oil extraction in Borysław?", exampleKononowicze: "What is known about the locality of Kononowicze in Oszmiana County?",
     exampleZyrardow: "How many workers were employed in Żyrardów's factories, and what products were made there?", downloadPdf: "Download PDF",
+    exampleReligiousCount: "How many entries contain information about religious buildings?",
     clearConversation: "Clear conversation", yourQuestion: "Your question",
     questionPlaceholder: "Ask about a place, person, or subject described in the dictionary…", ask: "Ask",
     verifyAnswers: "Automatically generated answers should be checked against the cited entries.",
     helpTitle: "How to use SGKP?", aboutApp: "About the application", aboutText: "This application provides entries from all 16 volumes of the Geographical Dictionary of the Kingdom of Poland and Other Slavic Countries. The text comes from OCR; each result links to a scan of the source page. The current version of the application is a prototype, so issues may occur and the way the application works may change frequently. The data available in the application (the SGKP text and metadata) are also subject to change as part of the ongoing error verification process.",
     helpSearchTitle: "Searching", helpSearchText: "Enter a name or phrase and choose full-text, hybrid, or semantic search. Filters can narrow results by volume, district, and locality. Select a result title to read the full entry.",
     helpChatTimeLimit: "The server may interrupt a request if processing takes longer than 5 minutes (300 seconds). This limit includes source retrieval, verification, and answer generation. If this happens, try again or narrow the scope of your question.",
+    helpBrowseTitle: "Browsing",
+    helpBrowseText: "Browse individual entries and subentries of collective entries in identifier order, with 50 entries per page. The default is volume 1 and all entry types. In the left panel, choose a volume or all volumes, enter a name or part of a name, and set other filters. The list updates after each change; the panel can be collapsed. For commune and Catholic parish filters, enter part of a name, then select an option from the list. Switch between list and grid views and use the navigation above or below the list. Select a name to open the entry text and metadata, or the scan link to view the source page. Subentries are labelled as parts of collective entries and inherit their volume and page from the collective entry. Information presence filters refer to metadata annotations — a missing annotation does not establish that an object was absent from a locality.",
     helpChatTitle: "Conversation", helpChatText: "Ask a question about the dictionary. Answers are based on retrieved entry passages and include citations to the sources. Open cited entries to verify an answer. You can ask follow-up questions about earlier answers. “Download PDF” saves the conversation with its sources; “Clear conversation” removes it from this browser tab. If the local model is unavailable, the current question, a short conversation history, and retrieved passages are sent to OpenAI; the application identifies answers generated this way. The conversation is not intended to produce exhaustive lists of every locality.",
     closeHelp: "Close help", dictionaryEntry: "Dictionary entry", openScan: "Open page scan", scan: "Scan",
     closeEntry: "Close entry", entryMetadata: "Entry metadata", entryType: "Type", localityType: "Settlement type",
@@ -187,7 +211,7 @@ const UI_COPY = {
   }
 };
 let currentLanguage = "pl";
-const state = { page: 1, hasNext: false, entry: null, highlight: null, request: 0, gminas: [], chatBusy: false,
+const state = { page: 1, hasNext: false, entry: null, highlight: null, request: 0, gminas: [], parishes: [], chatBusy: false,
   chatController: null, chatGeneration: 0, chatHistory: [], exportTurns: [], searchData: null, searchOffsets: {},
   browsePage: 1, browseHasNext: false, browseData: null, browseRequest: 0, browseView: "list", showParentContext: true,
   filtersCollapsed: window.matchMedia("(max-width: 760px)").matches };
@@ -219,7 +243,6 @@ function applyLanguage(language, persist = false) {
   document.querySelectorAll("[data-i18n-placeholder]").forEach(node => node.placeholder = t(node.dataset.i18nPlaceholder));
   document.querySelectorAll("[data-i18n-aria]").forEach(node => node.setAttribute("aria-label", t(node.dataset.i18nAria)));
   document.querySelectorAll("[data-i18n-title]").forEach(node => node.title = t(node.dataset.i18nTitle));
-  for (const option of $("browse-volume").options) option.textContent = displayVolume(option.value);
   const volumeFilter = $("tom");
   const selectedVolume = volumeFilter.value;
   for (const option of Array.from(volumeFilter.options).slice(1)) option.textContent = displayVolume(option.value);
@@ -234,6 +257,7 @@ function applyLanguage(language, persist = false) {
   updateFilterToggleLabel();
   modeUi();
   if (state.gminas.length) renderGminaChoices();
+  if (state.parishes.length) renderParishChoices();
   if (state.searchData) renderSearchResults(state.searchData);
   if (state.browseData) renderBrowseResults(state.browseData);
   if (state.entry) renderEntry();
@@ -327,6 +351,11 @@ function activeFilters() {
     for (const id of ["typ_punktu_osadniczego", "gmina", "gubernia_ujednolicona"]) {
       if ($(id).value) selected[id] = $(id).value;
     }
+    if (!$("parish-filter").hidden && $("parafia_katolicka").value) selected.parafia_katolicka = $("parafia_katolicka").value;
+  }
+  if (!$("information-options").hidden) {
+    document.querySelectorAll("[data-presence-filter]:checked").forEach(input =>
+      selected[input.id] = "true");
   }
   return selected;
 }
@@ -352,8 +381,9 @@ function updateLocalityUi(clear = false) {
   $("locality-hint").hidden = enabled;
   if (!enabled && clear) {
     $("kingdom-only").checked = false;
-    for (const id of ["typ_punktu_osadniczego", "gmina", "gubernia_ujednolicona", "gmina-search"]) $(id).value = "";
+    for (const id of ["typ_punktu_osadniczego", "gmina", "gubernia_ujednolicona", "gmina-search", "parafia_katolicka", "parafia_katolicka-search"]) $(id).value = "";
     renderGminaChoices();
+    renderParishChoices();
   }
   updateFilterToggleLabel();
 }
@@ -368,16 +398,52 @@ function viewFromHash() {
   if (["#przegladanie", "#browse"].includes(location.hash)) return "przegladanie";
   return "wyszukiwanie";
 }
+function capturePanelFilters() {
+  return Array.from($("filter-panel").querySelectorAll("input, select"), node => ({
+    id: node.id, name: node.name, value: node.value, checked: node.checked, type: node.type,
+  }));
+}
+function restorePanelFilters(saved, browsing) {
+  for (const node of $("filter-panel").querySelectorAll("input, select")) {
+    const previous = saved?.find(item => node.id ? item.id === node.id : item.name === node.name && item.value === node.value);
+    if (node.type === "checkbox" || node.type === "radio") {
+      node.checked = previous ? previous.checked : node.type === "radio" && node.value === (browsing ? "all" : "only");
+    } else {
+      const value = previous ? previous.value : node.id === "tom" && browsing ? "01" : "";
+      if (node.tagName === "SELECT" && value && !Array.from(node.options).some(option => option.value === value)) {
+        const option = element("option", value);
+        option.value = value;
+        node.append(option);
+      }
+      node.value = value;
+    }
+  }
+  renderGminaChoices();
+  renderParishChoices();
+  updateLocalityUi();
+}
+function refreshFilteredView() {
+  if (!$("browse-view").hidden) loadBrowse(1);
+  else if (!$("search-view").hidden && $("query").value.trim()) search(1);
+}
 function switchView(view, updateUrl = true) {
   const selected = view === "konwersacja" || view === "asystent" ? "konwersacja"
     : view === "przegladanie" ? "przegladanie" : "wyszukiwanie";
+  const scope = selected === "przegladanie" ? "browse" : "shared";
+  const previousScope = state.filterScope || "shared";
+  if (scope !== previousScope) {
+    state[previousScope + "PanelFilters"] = capturePanelFilters();
+    restorePanelFilters(state[scope + "PanelFilters"], scope === "browse");
+    state.filterScope = scope;
+  }
   $("search-view").hidden = selected !== "wyszukiwanie";
   $("assistant-view").hidden = selected !== "konwersacja";
   $("browse-view").hidden = selected !== "przegladanie";
   $("tab-search").setAttribute("aria-selected", String(selected === "wyszukiwanie"));
   $("tab-assistant").setAttribute("aria-selected", String(selected === "konwersacja"));
   $("tab-browse").setAttribute("aria-selected", String(selected === "przegladanie"));
-  if (selected !== "przegladanie") $(selected === "konwersacja" ? "assistant-filter-slot" : "search-filter-slot").append($("filter-panel"));
+  $(selected === "przegladanie" ? "browse-filter-slot" : selected === "konwersacja" ? "assistant-filter-slot" : "search-filter-slot").append($("filter-panel"));
+  $("browse-name-filter").hidden = selected !== "przegladanie";
   if (updateUrl) history.replaceState(null, "", location.pathname + location.search + "#" + selected);
 }
 function queryParams(page) {
@@ -420,7 +486,7 @@ function resultCard(hit) {
   const title = element("h3");
   const open = element("button", hit.nazwa || hit.ID);
   open.type = "button";
-  open.addEventListener("click", () => openEntry(hit.ID));
+  open.addEventListener("click", () => openEntry(hit.ID, undefined, undefined, $("browse-view").hidden));
   title.append(open);
   card.append(title);
   const meta = element("div", undefined, "result-meta");
@@ -469,15 +535,15 @@ function browseGridCard(hit) {
   const title = element("h3");
   const open = element("button", hit.nazwa || hit.ID);
   open.type = "button";
-  open.addEventListener("click", () => openEntry(hit.ID));
+  open.addEventListener("click", () => openEntry(hit.ID, undefined, undefined, $("browse-view").hidden));
   title.append(open);
   card.append(title);
   const meta = element("div", undefined, "result-meta");
   meta.append(element("span", t("volumePage", {volume: displayVolume(hit.tom), page: hit.strona || "—"})));
   if (hit.url_skanu) meta.append(externalLink(t("scanPage"), hit.url_skanu));
   card.append(meta);
-  const values = hit.rodzaj === "zbiorcze" ? [t("collectiveKind")] :
-    (Array.isArray(hit.typ_punktu_osadniczego) && hit.typ_punktu_osadniczego.length
+  if (hit.parent_id) meta.append(element("span", t("collectiveItem", {number: hit.nr ? " · " + hit.nr : ""})));
+  const values = (Array.isArray(hit.typ_punktu_osadniczego) && hit.typ_punktu_osadniczego.length
       ? hit.typ_punktu_osadniczego
       : Array.isArray(hit.typ) ? hit.typ : hit.typ ? [hit.typ] : []);
   if (values.length) {
@@ -522,10 +588,33 @@ function renderSearchResults(data) {
     setText($("status"), t("verifiedCount", {count: data.hits.length}) + " · " + t("verificationIncomplete"));
   }
 }
+function clearSearchResults() {
+  // Invalidate pending responses so they cannot restore cleared results.
+  ++state.request;
+  state.searchData = null;
+  state.searchOffsets = {};
+  state.page = 1;
+  state.hasNext = false;
+  $("status").classList.remove("is-searching", "error");
+  setText($("status"), t("startSearch"));
+  $("results").setAttribute("aria-busy", "false");
+  const empty = makeEmpty(t("startByName"), t("enterQuery"));
+  empty.querySelector("h3").dataset.i18n = "startByName";
+  empty.querySelector("p").dataset.i18n = "enterQuery";
+  $("results").replaceChildren(empty);
+  $("pagination").hidden = true;
+  $("prev").disabled = true;
+  $("next").disabled = true;
+  setText($("page-label"), t("resultPage", {page: 1}));
+  const params = new URLSearchParams(location.search);
+  for (const key of ["q", "page", "candidate_offset"]) params.delete(key);
+  const query = params.toString();
+  history.replaceState(null, "", location.pathname + (query ? "?" + query : "") + location.hash);
+}
 async function search(page = 1) {
   if (page === 1) state.searchOffsets = {};
   const params = queryParams(page);
-  if (!params.get("q")) return;
+  if (!params.get("q")) { clearSearchResults(); return; }
   const current = ++state.request;
   state.searchData = null;
   setText($("status"), t(params.get("verify") === "true" ? "searchingVerified" : "searching"));
@@ -578,80 +667,14 @@ function renderBrowseResults(data) {
       }
       const card = resultCard({...hit, typ_punktu_osadniczego: [], snippet: hit.preview,
         snippet_is_markdown: hit.preview_is_markdown});
-      if (hit.rodzaj === "zbiorcze") {
-        const kind = element("div", undefined, "result-meta");
-        kind.style.marginTop = "10px";
-        kind.append(element("span", t("collectiveKind"), "tag"));
-        const childrenPanel = element("div", undefined, "browse-subentries");
-        childrenPanel.id = "subentries-" + hit.ID;
-        childrenPanel.hidden = true;
-        const toggle = element("button", "▾", "button button-outline browse-subentries-toggle");
-        toggle.type = "button";
-        toggle.setAttribute("aria-label", t("showSubentries"));
-        toggle.title = t("showSubentries");
-        toggle.setAttribute("aria-expanded", "false");
-        toggle.setAttribute("aria-controls", childrenPanel.id);
-        toggle.addEventListener("click", async () => {
-          const expanded = toggle.getAttribute("aria-expanded") !== "true";
-          toggle.setAttribute("aria-expanded", String(expanded));
-          setText(toggle, expanded ? "▴" : "▾");
-          toggle.setAttribute("aria-label", t(expanded ? "hideSubentries" : "showSubentries"));
-          toggle.title = t(expanded ? "hideSubentries" : "showSubentries");
-          childrenPanel.hidden = !expanded;
-          if (!expanded || hit.subentriesLoaded) return;
-          childrenPanel.replaceChildren(element("p", t("loadingSubentries"), "field-hint"));
-          try {
-            const children = await api("api/v1/browse/" + encodeURIComponent(hit.ID) + "/children");
-            hit.subentries = children.hits || [];
-            hit.subentriesLoaded = true;
-            childrenPanel.replaceChildren();
-            if (!hit.subentries.length) {
-              childrenPanel.append(element("p", t("noSubentries"), "field-hint"));
-              return;
-            }
-            childrenPanel.append(element("h4", t("subentriesTitle")));
-            const list = element("ol");
-            for (const child of hit.subentries) {
-              const item = element("li");
-              const openChild = element("button", child.nazwa, "text-button browse-subentry-link");
-              openChild.type = "button";
-              openChild.addEventListener("click", () => openEntry(child.ID, undefined, undefined, false));
-              item.append(openChild);
-              const localityTypes = Array.isArray(child.typ_punktu_osadniczego)
-                ? child.typ_punktu_osadniczego : child.typ_punktu_osadniczego ? [child.typ_punktu_osadniczego] : [];
-              const types = localityTypes.length ? localityTypes
-                : Array.isArray(child.typ) ? child.typ : child.typ ? [child.typ] : [];
-              if (types.length) {
-                const typeList = element("div", undefined, "browse-subentry-types");
-                for (const value of types) typeList.append(element("span", typeof value === "string" ? value : JSON.stringify(value), "tag"));
-                item.append(typeList);
-              }
-              if (child.preview) {
-                const preview = element("p", undefined, "browse-subentry-preview");
-                if (child.preview_is_markdown) appendAnswerInline(preview, child.preview);
-                else setText(preview, child.preview);
-                item.append(preview);
-              }
-              list.append(item);
-            }
-            childrenPanel.append(list);
-          } catch (error) {
-            childrenPanel.replaceChildren(element("p", translatedError(error.message), "filter-message"));
-          }
-        });
-        kind.append(toggle);
-        card.append(kind, childrenPanel);
-      } else {
-        const localityTypes = Array.isArray(hit.typ_punktu_osadniczego)
-          ? hit.typ_punktu_osadniczego : hit.typ_punktu_osadniczego ? [hit.typ_punktu_osadniczego] : [];
-        const isLocality = localityTypes.length > 0;
-        const values = isLocality ? localityTypes : Array.isArray(hit.typ) ? hit.typ : hit.typ ? [hit.typ] : [];
-        if (values.length) {
-          const type = element("div", undefined, "result-meta");
-          type.style.marginTop = "10px";
-          for (const value of values) type.append(element("span", typeof value === "string" ? value : JSON.stringify(value), "tag"));
-          card.append(type);
-        }
+      const localityTypes = Array.isArray(hit.typ_punktu_osadniczego)
+        ? hit.typ_punktu_osadniczego : hit.typ_punktu_osadniczego ? [hit.typ_punktu_osadniczego] : [];
+      const values = localityTypes.length ? localityTypes : Array.isArray(hit.typ) ? hit.typ : hit.typ ? [hit.typ] : [];
+      if (values.length) {
+        const type = element("div", undefined, "result-meta");
+        type.style.marginTop = "10px";
+        for (const value of values) type.append(element("span", typeof value === "string" ? value : JSON.stringify(value), "tag"));
+        card.append(type);
       }
       $("browse-results").append(card);
     }
@@ -669,7 +692,7 @@ async function loadBrowse(page = 1) {
   $("browse-results").replaceChildren();
   $("browse-pagination").hidden = true;
   $("browse-pagination-top").hidden = true;
-  const params = new URLSearchParams({tom: $("browse-volume").value, page: String(page)});
+  const params = new URLSearchParams({...activeFilters(), tom: $("tom").value, page: String(page)});
   const name = $("browse-name").value.trim();
   if (name) params.set("name", name);
   try {
@@ -686,14 +709,20 @@ async function loadBrowse(page = 1) {
   }
 }
 function renderGminaChoices() {
-  const select = $("gmina");
+  renderNamedFilterChoices("gmina", state.gminas, "allCommunes", "communeMatches", "communeHint");
+}
+function renderParishChoices() {
+  renderNamedFilterChoices("parafia_katolicka", state.parishes, "allParishes", "parishMatches", "parishHint");
+}
+function renderNamedFilterChoices(id, values, allKey, matchesKey, hintKey) {
+  const select = $(id);
   const selected = select.value;
-  const query = $("gmina-search").value.trim().toLocaleLowerCase("pl");
-  const matched = query ? state.gminas.filter(value => value.toLocaleLowerCase("pl").includes(query)) : state.gminas;
+  const query = $(id + "-search").value.trim().toLocaleLowerCase("pl");
+  const matched = query ? values.filter(value => value.toLocaleLowerCase("pl").includes(query)) : values;
   const visible = matched.slice(0, 100);
   if (selected && !visible.includes(selected)) visible.unshift(selected);
   select.replaceChildren();
-  const all = element("option", t("allCommunes"));
+  const all = element("option", t(allKey));
   all.value = "";
   select.append(all);
   for (const value of visible) {
@@ -702,9 +731,7 @@ function renderGminaChoices() {
     select.append(option);
   }
   select.value = selected && visible.includes(selected) ? selected : "";
-  setText($("gmina-hint"), query
-    ? t("communeMatches", {count: matched.length})
-    : t("communeHint"));
+  setText($(id + "-hint"), query ? t(matchesKey, {count: matched.length}) : t(hintKey));
 }
 function fillSelect(id, values) {
   const select = $(id);
@@ -718,23 +745,31 @@ async function loadFilterOptions() {
   try {
     const data = await api("api/v1/filter-options");
     const options = data.options || {};
+    $("information-options").hidden = !data.presence_filters_available;
+    $("parish-filter").hidden = !data.catholic_parish_filter_available;
     for (const id of optionFields) fillSelect(id, options[id] || []);
     state.gminas = (options.gmina || []).filter(value =>
       typeof value === "string" && /^\p{L}/u.test(value.trimStart()));
     renderGminaChoices();
+    state.parishes = (options.parafia_katolicka || []).filter(value =>
+      typeof value === "string" && /^\p{L}/u.test(value.trimStart()));
+    renderParishChoices();
   } catch {
     fillSelect("tom", Array.from({length: 16}, (_, index) => String(index + 1).padStart(2, "0")));
     setText($("filter-options-status"), t("filterLoadFailed"));
   }
 }
 function clearFilters() {
-  for (const id of [...optionFields, "gmina-search", "gmina"]) $(id).value = "";
+  for (const id of [...optionFields, "gmina-search", "gmina", "parafia_katolicka", "parafia_katolicka-search"]) $(id).value = "";
   $("kingdom-only").checked = false;
-  document.querySelector('input[name="locality"][value="only"]').checked = true;
+  document.querySelectorAll("[data-presence-filter]").forEach(input => input.checked = false);
+  $("browse-name").value = "";
+  document.querySelector('input[name="locality"][value="' + ($("browse-view").hidden ? "only" : "all") + '"]').checked = true;
   updateLocalityUi();
   renderGminaChoices();
+  renderParishChoices();
   updateFilterToggleLabel();
-  if ($("query").value.trim()) search(1);
+  refreshFilteredView();
 }
 
 function appendAnswerInline(target, text) {
@@ -1192,20 +1227,12 @@ async function initialize() {
   $("open-help").addEventListener("click", () => $("help-dialog").showModal());
   $("close-help").addEventListener("click", () => $("help-dialog").close());
   $("search-form").addEventListener("submit", event => { event.preventDefault(); search(1); });
+  $("query").addEventListener("input", () => {
+    if (!$("query").value.trim()) clearSearchResults();
+  });
   $("prev").addEventListener("click", () => search(state.page - 1));
   $("next").addEventListener("click", () => search(state.page + 1));
-  $("browse-volume").addEventListener("change", () => loadBrowse(1));
-  $("browse-filters").addEventListener("submit", event => {
-    event.preventDefault();
-    loadBrowse(1);
-  });
-  $("browse-name").addEventListener("input", () => {
-    clearTimeout(state.browseFilterTimer);
-    ++state.browseRequest;
-    $("browse-pagination").hidden = true;
-    $("browse-pagination-top").hidden = true;
-    state.browseFilterTimer = setTimeout(() => loadBrowse(1), 300);
-  });
+  $("browse-name").addEventListener("input", () => loadBrowse(1));
   $("browse-view-list").addEventListener("click", () => setBrowseView("list"));
   $("browse-view-grid").addEventListener("click", () => setBrowseView("grid"));
   $("browse-first-top").addEventListener("click", () => loadBrowse(1));
@@ -1223,19 +1250,24 @@ async function initialize() {
       state.filtersCollapsed = !state.filtersCollapsed;
       updateFilterToggleLabel();
     }));
-  $("gmina-search").addEventListener("input", () => {
-    const hadSelection = Boolean($("gmina").value);
-    $("gmina").value = "";
-    renderGminaChoices();
+  for (const id of ["gmina", "parafia_katolicka"]) $(id + "-search").addEventListener("input", () => {
+    const hadSelection = Boolean($(id).value);
+    $(id).value = "";
+    if (id === "gmina") renderGminaChoices(); else renderParishChoices();
     updateFilterToggleLabel();
-    if (hadSelection && $("query").value.trim()) search(1);
+    if (hadSelection) refreshFilteredView();
   });
   $("ratio").addEventListener("input", () => setText($("ratio-value"), $("ratio").value + "%"));
   $("ratio").addEventListener("change", () => { if ($("query").value.trim()) search(1); });
   $("verify-results").addEventListener("change", () => { if ($("query").value.trim()) search(1); });
   for (const input of document.querySelectorAll('input[name="mode"]')) input.addEventListener("change", () => { modeUi(); if ($("query").value.trim()) search(1); });
-  for (const input of document.querySelectorAll('input[name="locality"]')) input.addEventListener("change", () => { updateLocalityUi(true); if ($("query").value.trim()) search(1); });
-  for (const id of [...optionFields, "gmina", "kingdom-only"]) $(id).addEventListener("change", () => { updateFilterToggleLabel(); if ($("query").value.trim()) search(1); });
+  for (const input of document.querySelectorAll('input[name="locality"]')) input.addEventListener("change", () => { updateLocalityUi(true); refreshFilteredView(); });
+  document.querySelectorAll("[data-presence-filter]").forEach(input =>
+    input.addEventListener("change", () => {
+      updateFilterToggleLabel();
+      refreshFilteredView();
+    }));
+  for (const id of [...optionFields, "gmina", "parafia_katolicka", "kingdom-only"]) $(id).addEventListener("change", () => { updateFilterToggleLabel(); refreshFilteredView(); });
   $("close-dialog").addEventListener("click", () => $("entry-dialog").close());
   $("clear-chat").addEventListener("click", clearChat);
   $("export-pdf").addEventListener("click", exportChatPdf);
@@ -1259,10 +1291,13 @@ async function initialize() {
   modeUi();
   for (const id of optionFields) if (params.get(id)) $(id).value = params.get(id);
   if (params.get("gmina")) { $("gmina-search").value = params.get("gmina"); renderGminaChoices(); $("gmina").value = params.get("gmina"); }
-  if (params.get("jest_miejscowoscia") === "true" || ["gmina", "gubernia_ujednolicona", "typ_punktu_osadniczego", "królestwo_polskie"].some(id => params.get(id))) {
+  if (params.get("parafia_katolicka") && !$("parish-filter").hidden) { $("parafia_katolicka-search").value = params.get("parafia_katolicka"); renderParishChoices(); $("parafia_katolicka").value = params.get("parafia_katolicka"); }
+  if (params.get("jest_miejscowoscia") === "true" || ["gmina", "parafia_katolicka", "gubernia_ujednolicona", "typ_punktu_osadniczego", "królestwo_polskie"].some(id => params.get(id))) {
     document.querySelector('input[name="locality"][value="only"]').checked = true;
   }
   $("kingdom-only").checked = params.get("królestwo_polskie") === "true";
+  document.querySelectorAll("[data-presence-filter]").forEach(input =>
+    input.checked = params.get(input.id) === "true");
   updateLocalityUi();
   const initialView = viewFromHash();
   switchView(initialView, false);

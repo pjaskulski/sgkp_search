@@ -134,6 +134,7 @@ class RelevanceDiagnostic:
                  "metadata": {key: hit[key] for key in (
                      "typ", "typ_punktu_osadniczego", "opis_lokalizacji", "powiat_ujednolicony",
                      "przemysłowe", "młyny", "obiekty_sakralne", "archeo",
+                     "szkoły", "zabytki", "opieka_zdrowotna", "biblioteki", "uzdrowiska",
                      "jest_miejscowoscia", "królestwo_polskie") if key in hit}}
         # Bound metadata too; the model's practical classification context is short.
         state["metadata"] = json.dumps(state["metadata"], ensure_ascii=False)[:1000]

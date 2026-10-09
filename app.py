@@ -12,7 +12,7 @@ from io import BytesIO
 from pathlib import Path
 
 from flask import Flask, Response, jsonify, request, send_file, send_from_directory
-from sgkp_core import FILTER_FIELDS, iter_entries, passages
+from sgkp_core import BOOLEAN_FILTER_FIELDS, FILTER_FIELDS, PRESENCE_FIELDS, iter_entries, normalize, passages
 from sgkp_pdf import MAX_EXPORT_BYTES, render_chat_pdf, validate_export_turns
 from sgkp_render import render_entry_markdown
 from sgkp_chat_progress import report_progress, streamed_preparation
@@ -36,6 +36,15 @@ CHAT_GENERIC_SELECTION_PER_BATCH = 20
 CHAT_METADATA_HITS_PER_QUERY = 12
 CHAT_METADATA_CANDIDATE_LIMIT = 24
 CHAT_METADATA_FIELDS = ("przemysłowe", "młyny", "typ", "archeo")
+CHAT_INFORMATION_LABELS = {
+    "obiekty_sakralne": ("obiektach sakralnych", "religious buildings"),
+    "szkoły": ("szkołach", "schools"), "młyny": ("młynach", "mills"),
+    "przemysłowe": ("przemyśle", "industry"), "zabytki": ("zabytkach", "historical monuments"),
+    "archeo": ("archeologii", "archaeology"),
+    "opieka_zdrowotna": ("opiece zdrowotnej", "healthcare"),
+    "biblioteki": ("bibliotekach", "libraries"), "uzdrowiska": ("uzdrowiskach", "spas"),
+}
+CHAT_EVIDENCE_METADATA_FIELDS = tuple(dict.fromkeys((*CHAT_METADATA_FIELDS, *CHAT_INFORMATION_LABELS)))
 CHAT_PASSAGES_PER_ENTRY = 3
 CHAT_NAMED_BACKGROUND_LIMIT = 4
 CHAT_NAMED_SUBJECT_LIMIT = 6
@@ -44,7 +53,8 @@ CHAT_HISTORY_ANSWER_CHARS = 5000
 CHAT_HISTORY_PROMPT_CHARS = 20000
 CHAT_SOURCE_FIELDS = (
     "passage_id", "entry_id", "nazwa", "tom", "strona", "text", "start_offset", "end_offset",
-    "jest_miejscowoscia", "powiat_ujednolicony", "królestwo_polskie", *CHAT_METADATA_FIELDS,
+    "jest_miejscowoscia", "powiat_ujednolicony", "parafia_katolicka", "królestwo_polskie", *CHAT_EVIDENCE_METADATA_FIELDS,
+    *PRESENCE_FIELDS,
 )
 HIGHLIGHT_START = "⟪SGKP-HL⟫"
 HIGHLIGHT_END = "⟪/SGKP-HL⟫"
@@ -163,12 +173,23 @@ def model_interpret_question(question: str, config: dict, history: list,
                 "powiat_ujednolicony"]
         except (KeyError, OSError, ValueError, TypeError) as exc:
             app.logger.warning("Lista powiatów niedostępna podczas interpretacji pytania: %s", exc)
-    fallback = {"names": names_in_question(question), "district": None, "many_localities": False}
+    fallback = {"names": names_in_question(question), "district": None, "many_localities": False,
+                "information_categories": [], "count_entries": False}
     messages = [
         {"role": "system", "content":
          "Zinterpretuj pytanie do wyszukiwania w SGKP. Nie odpowiadaj na pytanie. "
-         "Zwróć wyłącznie JSON z trzema polami: names (lista nazw), district "
-         "(wartość z listy powiatów albo null), many_localities (true albo false). "
+         "Zwróć wyłącznie JSON: names (lista nazw), district "
+         "(wartość z listy powiatów albo null), many_localities (true albo false), "
+         "information_categories (lista kategorii), count_entries (true albo false). "
+         "information_categories: wybierz wyłącznie spośród obiekty_sakralne, szkoły, młyny, "
+         "przemysłowe, zabytki, archeo, opieka_zdrowotna, biblioteki, uzdrowiska. "
+         "Kategorie wskazują obecność informacji; dla węższego tematu można wskazać kategorię nadrzędną. "
+         "Nie zaznaczaj kategorii wykluczonych przez pytanie. count_entries: true wyłącznie gdy "
+         "użytkownik chce policzyć hasła lub podhasła z informacjami o CAŁEJ wskazanej kategorii. "
+         "false przy liczbie obiektów, liczbie miejscowości, węższym podtypie kategorii, "
+         "porównaniach, zliczaniu tylko wyników poprzedniej odpowiedzi lub ograniczeniu "
+         "geograficznym innym niż jednoznacznie rozpoznany district. "
+         "Wiele kategorii oznacza wymóg obecności każdej z nich; alternatywa oznacza pustą listę. "
          "names: nazwy własne haseł, o które użytkownik pyta bezpośrednio: miejscowości, "
          "obiektów geograficznych lub osób. Rozpoznawaj zapis małą literą i formy odmienione. "
          "Przepisz nazwy dokładnie z bieżącego pytania; nie dopowiadaj nazw z historii. "
@@ -189,7 +210,7 @@ def model_interpret_question(question: str, config: dict, history: list,
             "districts": districts}, ensure_ascii=False)},
     ]
     try:
-        answer = preliminary_chat_answer(messages, 350, "interpretacja pytania").strip()
+        answer = preliminary_chat_answer(messages, 500, "interpretacja pytania").strip()
         if answer.startswith("```"):
             answer = answer.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
         parsed = json.loads(answer)
@@ -205,10 +226,15 @@ def model_interpret_question(question: str, config: dict, history: list,
         and name.strip().casefold() in question.casefold()))[:CHAT_NAMED_SUBJECT_LIMIT]
         if isinstance(names, list) else fallback["names"])
     district = parsed.get("district")
+    categories = parsed.get("information_categories")
+    categories = list(dict.fromkeys(item for item in categories
+        if isinstance(item, str) and item in CHAT_INFORMATION_LABELS)) if isinstance(categories, list) else []
     result = {
         "names": accepted_names,
         "district": district if isinstance(district, str) and district in districts else None,
         "many_localities": parsed.get("many_localities") is True,
+        "information_categories": categories,
+        "count_entries": parsed.get("count_entries") is True and bool(categories) and not accepted_names,
     }
     log_chat_decision("interpretacja pytania — wynik", **result, zastępczy=False)
     return result
@@ -399,7 +425,7 @@ def source_matches_filters(source: dict, selected: dict) -> bool:
         expected = selected.get(key)
         if expected in (None, ""):
             continue
-        if key in ("jest_miejscowoscia", "królestwo_polskie"):
+        if key in BOOLEAN_FILTER_FIELDS:
             expected = str(expected).lower() == "true"
         actual = source.get(key)
         if expected not in (actual if isinstance(actual, list) else [actual]):
@@ -503,13 +529,56 @@ def source_metadata_text(source: dict) -> str:
     labels = {"przemysłowe": "obiekty i działalność przemysłowa",
               "młyny": "młyny", "typ": "typ hasła", "archeo": "informacje archeologiczne"}
     items = []
-    for field in CHAT_METADATA_FIELDS:
+    for field in CHAT_EVIDENCE_METADATA_FIELDS:
         value = source.get(field)
         values = value if isinstance(value, list) else [value]
-        clean = [item.strip() for item in values if isinstance(item, str) and item.strip()]
+        clean = [item.strip() if isinstance(item, str) else json.dumps(item, ensure_ascii=False)
+                 for item in values if item not in (None, "", [], {})]
         if clean:
-            items.append(f"{labels[field]}: {', '.join(clean)}")
+            items.append(f"{labels.get(field, field)}: {', '.join(clean)}")
     return "Metadane hasła: " + "; ".join(items) + "\n" if items else ""
+
+
+@lru_cache(maxsize=32)
+def annotated_entry_count(source_dir: str, version: str | None,
+                          selected: tuple, categories: tuple) -> int:
+    """Count atomic entries, not passages, objects or estimated search hits."""
+    selected = dict(selected)
+    return sum(1 for entry in iter_entries(Path(source_dir))
+               if source_matches_filters(entry, selected)
+               and all(entry.get(f"has_{field}") is True for field in categories))
+
+
+@timed_stage("wyszukiwanie według obecności informacji")
+def presence_passage_candidates(config: dict, categories: list[str], expression: list[str]) -> list[dict]:
+    if not categories or config.get("presence_filters_version") != 1:
+        return []
+    try:
+        entries = Meili().search(config["entries_index"], {
+            "q": "", "limit": CHAT_SEARCH_LIMIT,
+            "filter": [*expression, *[f"has_{field} = true" for field in categories]],
+            "attributesToRetrieve": ["ID"],
+        }).get("hits", [])
+        result = []
+        for entry in entries:
+            detail = source_detail(Path(config["source_dir"]), Path(config["lookup_db"]), entry["ID"])
+            if detail is None:
+                continue
+            raw = detail["entry"]
+            chunks = passages({**raw, "tom": detail["tom"], "strona": detail["strona"],
+                               "jest_miejscowoscia": bool(raw.get("typ_punktu_osadniczego"))})
+            if not chunks:
+                continue
+            # Use the actual annotation to locate evidence in the entry, not its title.
+            terms = question_terms(" ".join(json.dumps(raw.get(field), ensure_ascii=False)
+                                            for field in categories))
+            best = max(chunks, key=lambda item: sum(
+                term in item["text"].casefold() for term in terms))
+            result.append({**best, **{key: raw.get(key) for key in CHAT_EVIDENCE_METADATA_FIELDS}})
+        return result
+    except (ServiceError, OSError, KeyError, ValueError) as exc:
+        app.logger.warning("Źródła według obecności informacji niedostępne: %s", exc)
+        return []
 
 
 @timed_stage("wyszukiwanie metadanych")
@@ -524,7 +593,7 @@ def metadata_passage_candidates(config: dict, searches: list[tuple[str, str]],
                 "filter": expression, "attributesToSearchOn": [field],
                 "attributesToRetrieve": ["ID", "nazwa", "text", "tom", "strona",
                                          "jest_miejscowoscia", "powiat_ujednolicony",
-                                         "królestwo_polskie", *CHAT_METADATA_FIELDS],
+                                         "królestwo_polskie", *CHAT_METADATA_FIELDS, *PRESENCE_FIELDS],
             }).get("hits", [])
         except ServiceError as exc:
             app.logger.warning("Wyszukiwanie w metadanych niedostępne: %s", exc)
@@ -555,7 +624,7 @@ def historical_passage(config: dict, identifier: str, question: str) -> dict | N
     entry = detail["entry"]
     source = {**entry, "tom": detail["tom"], "strona": detail["strona"],
               "jest_miejscowoscia": bool(entry.get("typ_punktu_osadniczego"))}
-    chunks = [{**chunk, **{key: entry.get(key) for key in CHAT_METADATA_FIELDS}}
+    chunks = [{**chunk, **{key: entry.get(key) for key in CHAT_EVIDENCE_METADATA_FIELDS}}
               for chunk in passages(source)]
     index = int(sequence) - 1
     if not 0 <= index < len(chunks) or chunks[index]["passage_id"] != identifier:
@@ -582,7 +651,7 @@ def historical_entry_passages(config: dict, identifier: str) -> list[dict]:
     entry = detail["entry"]
     source = {**entry, "tom": detail["tom"], "strona": detail["strona"],
               "jest_miejscowoscia": bool(entry.get("typ_punktu_osadniczego"))}
-    chunks = [{**chunk, **{key: entry.get(key) for key in CHAT_METADATA_FIELDS}}
+    chunks = [{**chunk, **{key: entry.get(key) for key in CHAT_EVIDENCE_METADATA_FIELDS}}
               for chunk in passages(source)]
     return chunks if any(chunk["passage_id"] == identifier for chunk in chunks) else []
 
@@ -1075,39 +1144,45 @@ def entry_preview(row: dict, limit: int) -> tuple[str, bool]:
 
 @lru_cache(maxsize=16)
 def cached_browse_entries(source_path: str, version: str | None, volume: str) -> tuple[dict, ...]:
-    """Return top-level individual and collective entries in ID order."""
+    """Return individual entries and collective elements, using their own metadata."""
     path = Path(source_path) / f"sgkp_{volume}.json"
     rows = cached_volume(str(path))
-    entries = [row for row in rows if row.get("rodzaj") in ("indywidualne", "zbiorcze")]
-    entries.sort(key=lambda row: row.get("ID", ""))
     result = []
-    for row in entries:
-        preview, has_markdown = entry_preview(row, 350)
-        result.append({
-            "ID": row["ID"], "nazwa": row["nazwa"], "rodzaj": row["rodzaj"],
-            "tom": row.get("tom", int(volume)), "strona": row.get("strona"),
-            "typ": row.get("typ"), "typ_punktu_osadniczego": row.get("typ_punktu_osadniczego"),
-            "preview": preview, "preview_is_markdown": has_markdown,
-        })
-    return tuple(result)
+    for index, row in enumerate(rows):
+        units = [(None, row)] if row.get("rodzaj") == "indywidualne" else list(enumerate(row.get("elementy", [])))
+        for child_index, unit in units:
+            normalized = normalize(row, path.name, index,
+                                   unit if child_index is not None else None, child_index)
+            preview, has_markdown = entry_preview(unit, 350)
+            result.append({key: value for key, value in normalized.items() if key != "text"} | {
+                "preview": preview, "preview_is_markdown": has_markdown})
+    return tuple(sorted(result, key=lambda item: item["ID"]))
 
 
 @app.get("/api/v1/browse")
 def browse():
     config = manifest()
     volume = request.args.get("tom", "01")
-    if not re.fullmatch(r"\d{2}", volume) or not 1 <= int(volume) <= 16:
+    if volume and (not re.fullmatch(r"\d{2}", volume) or not 1 <= int(volume) <= 16):
         raise ValueError("Nieprawidłowy tom")
     page = bounded_int(request.args.get("page"), 1, 10000)
     page_size = 50
-    entries = cached_browse_entries(config["source_dir"], config.get("created_at"), volume)
+    selected = {key: request.args.get(key) for key in FILTER_FIELDS if request.args.get(key) not in (None, "")}
+    filters(selected)  # Validate the same filter values as Search and Conversation.
+    volumes = [volume] if volume else [f"{number:02d}" for number in range(1, 17)]
+    entries = tuple(item for vol in volumes
+                    for item in cached_browse_entries(config["source_dir"], config.get("created_at"), vol)
+                    if source_matches_filters(item, selected))
     name = request.args.get("name", "").strip()
     if len(name) > 300:
         raise ValueError("Nazwa może zawierać najwyżej 300 znaków")
     if name:
         entries = tuple(item for item in entries if name.casefold() in item["nazwa"].casefold())
     start = (page - 1) * page_size
-    hits = [{**item, "url_skanu": scan_url(item.get("tom"), item.get("strona"))}
+    visible_fields = ("ID", "nazwa", "rodzaj", "tom", "strona", "typ", "typ_punktu_osadniczego",
+                      "parent_id", "parent_nazwa", "nr", "powiat_ujednolicony", "preview", "preview_is_markdown")
+    hits = [{**{key: item[key] for key in visible_fields if key in item},
+             "url_skanu": scan_url(item.get("tom"), item.get("strona"))}
             for item in entries[start:start + page_size]]
     total = len(entries)
     return jsonify({"hits": hits, "estimated_total_hits": total, "page": page,
@@ -1172,7 +1247,7 @@ def facets():
 def cached_filter_options(source_dir: str, version: str | None) -> dict[str, list[str]]:
     """Complete dropdown values from the source used by the active index."""
     names = {key: set() for key in (
-        "tom", "powiat_ujednolicony", "typ_punktu_osadniczego", "gmina", "gubernia_ujednolicona"
+        "tom", "powiat_ujednolicony", "typ_punktu_osadniczego", "gmina", "parafia_katolicka", "gubernia_ujednolicona"
     )}
     for entry in iter_entries(Path(source_dir)):
         for key in ("tom", "powiat_ujednolicony"):
@@ -1181,14 +1256,14 @@ def cached_filter_options(source_dir: str, version: str | None) -> dict[str, lis
                 names[key].add(value.strip())
         if not entry["jest_miejscowoscia"]:
             continue
-        for key in ("typ_punktu_osadniczego", "gmina", "gubernia_ujednolicona"):
+        for key in ("typ_punktu_osadniczego", "gmina", "parafia_katolicka", "gubernia_ujednolicona"):
             value = entry.get(key)
             values = value if isinstance(value, list) else [value]
             for item in values:
                 if not isinstance(item, str):
                     continue
                 name = item.strip()
-                if name and (key != "gmina" or name[0].isalpha()):
+                if name and (key not in ("gmina", "parafia_katolicka") or name[0].isalpha()):
                     names[key].add(name)
     return {key: sorted(values, key=str.casefold) for key, values in names.items()}
 
@@ -1196,7 +1271,9 @@ def cached_filter_options(source_dir: str, version: str | None) -> dict[str, lis
 @app.get("/api/v1/filter-options")
 def filter_options():
     config = manifest()
-    return jsonify({"options": cached_filter_options(config["source_dir"], config.get("created_at"))})
+    return jsonify({"options": cached_filter_options(config["source_dir"], config.get("created_at")),
+                    "presence_filters_available": config.get("presence_filters_version") == 1,
+                    "catholic_parish_filter_available": config.get("catholic_parish_filter_version") == 1})
 
 
 @app.post("/api/v1/chat")
@@ -1241,6 +1318,53 @@ def chat():
             app.logger.info("Konwersacja: powiat rozpoznany w pytaniu: %s", district)
     expression = filters(selected_filters)
     mentioned_names = interpretation["names"]
+    categories = interpretation.get("information_categories", [])
+    if interpretation.get("count_entries") and categories:
+        report_progress("preparing_answer")
+        with_count_filters = tuple((key, selected_filters[key]) for key in FILTER_FIELDS
+                                  if selected_filters.get(key) not in (None, ""))
+        count_started = time.monotonic()
+        count = annotated_entry_count(config["source_dir"], config.get("created_at"),
+                                      with_count_filters, tuple(categories))
+        record_chat_stage("zliczanie haseł z adnotacjami", seconds=time.monotonic() - count_started,
+                          kategorie=categories, filtry=selected_filters, liczba=count)
+        topics = ", ".join(CHAT_INFORMATION_LABELS[field][language == "en"] for field in categories)
+        answer = (f"Entries with annotations about {topics}: **{count}**. "
+                  "This is an exact count of individual entries and subentries satisfying the filters, "
+                  "requiring annotations in every indicated category. It counts annotations, not objects "
+                  "or all mentions in the entry text. Missing annotations do not prove absence."
+                  if language == "en" else
+                  f"Liczba haseł z adnotacjami o {topics}: **{count}**. "
+                  "To dokładna liczba haseł indywidualnych i podhaseł spełniających filtry, "
+                  "z adnotacjami w każdej wskazanej kategorii. Wynik dotyczy adnotacji, a nie liczby "
+                  "obiektów ani wszystkich wzmianek w treści. Brak adnotacji nie dowodzi braku obiektu.")
+        if selected_filters:
+            answer += ("\n\nApplied filters: " if language == "en" else "\n\nUwzględnione filtry: ")
+            scope_labels = {"tom": ("tom", "volume"), "rodzaj": ("rodzaj hasła", "entry kind"),
+                "jest_miejscowoscia": ("miejscowości", "localities"),
+                "królestwo_polskie": ("Królestwo Polskie", "Kingdom of Poland"),
+                "powiat_ujednolicony": ("powiat", "district"), "gmina": ("gmina", "municipality"),
+                "parafia_katolicka": ("parafia katolicka", "Catholic parish"),
+                "gubernia_ujednolicona": ("gubernia", "governorate"),
+                "typ": ("typ", "type"), "typ_punktu_osadniczego": ("typ miejscowości", "locality type")}
+            for flag, field in PRESENCE_FIELDS.items():
+                scope_labels[flag] = (f"informacje o {CHAT_INFORMATION_LABELS[field][0]}",
+                                      f"annotations about {CHAT_INFORMATION_LABELS[field][1]}")
+            def scope_value(key, value):
+                if key in BOOLEAN_FILTER_FIELDS:
+                    yes = str(value).lower() == "true"
+                    return ("yes" if yes else "no") if language == "en" else ("tak" if yes else "nie")
+                return str(value)
+            answer += ", ".join(f"{scope_labels[key][language == 'en']}: {scope_value(key, value)}"
+                                for key, value in selected_filters.items()
+                                if key in scope_labels and value not in (None, "")) + "."
+        result = {"answer": answer, "sources": [], "provider": "statistics",
+                  "processing_seconds": round(time.monotonic() - chat_started, 3),
+                  "statistics": {"count": count, "categories": categories, "filters": selected_filters}}
+        if "text/event-stream" in request.headers.get("Accept", ""):
+            return Response(("event: answer\ndata: " + json.dumps(result, ensure_ascii=False) + "\n\n",
+                             "event: done\ndata: {}\n\n"), mimetype="text/event-stream")
+        return jsonify(result)
     followup = model_resolves_followup(question, history)
     log_chat_decision("zakres wyszukiwania", filtry=selected_filters,
                       nazwy=mentioned_names, kontynuacja=followup, historia=len(history))
@@ -1328,11 +1452,14 @@ def chat():
             metadata = (metadata_passage_candidates(
                 config, model_metadata_searches(retrieval_question), expression)
                 if not followup and not mentioned_names else [])
+            if not followup and interpretation["many_localities"] and categories:
+                presence = presence_passage_candidates(config, categories, expression)
+                metadata = list({item["passage_id"]: item for item in [*metadata, *presence]}.values())
             metadata_by_entry = {item["entry_id"]: item for item in metadata}
             log_chat_decision("wyniki wyszukiwania metadanych", liczba=len(metadata),
                               passage_ids=[item["passage_id"] for item in metadata])
             background = [{**item, **{key: metadata_by_entry[item["entry_id"]].get(key)
-                                   for key in CHAT_METADATA_FIELDS}}
+                                   for key in CHAT_EVIDENCE_METADATA_FIELDS}}
                           if item["entry_id"] in metadata_by_entry else item
                           for item in background]
             candidates = []

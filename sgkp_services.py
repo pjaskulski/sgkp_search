@@ -17,7 +17,7 @@ from urllib.parse import quote
 import requests
 
 from sgkp_chat_log import record as record_chat_stage, timed_stage
-from sgkp_core import FILTER_FIELDS, read_volume
+from sgkp_core import BOOLEAN_FILTER_FIELDS, FILTER_FIELDS, read_volume
 
 
 ROOT = Path(__file__).resolve().parent
@@ -447,7 +447,7 @@ def filter_expression(values: dict) -> list[str]:
     for key, raw in values.items():
         if key not in FILTER_FIELDS or raw in (None, ""):
             continue
-        if key in ("jest_miejscowoscia", "królestwo_polskie"):
+        if key in BOOLEAN_FILTER_FIELDS:
             if raw not in ("true", "false", True, False):
                 raise ValueError(f"Nieprawidłowa wartość filtra {key}")
             value = str(raw).lower()

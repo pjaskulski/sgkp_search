@@ -69,6 +69,10 @@
             <button class="text-button filter-clear" data-clear-filters type="button" data-i18n="clear">Wyczyść</button>
           </div>
           <section id="filter-panel" class="filter-panel" aria-label="Filtry" data-i18n-aria="filters">
+            <div id="browse-name-filter" class="filter-block" hidden>
+              <label class="field-label" for="browse-name" data-i18n="browseName">Nazwa</label>
+              <input id="browse-name" type="search" maxlength="300" autocomplete="off" placeholder="Nazwa lub fragment nazwy" data-i18n-placeholder="browseNamePlaceholder">
+            </div>
             <div class="filter-block">
               <label class="field-label" for="tom" data-i18n="volume">Tom</label>
               <select id="tom"><option value="" data-i18n="allVolumes">Wszystkie tomy</option></select>
@@ -100,6 +104,25 @@
                 <select id="gmina" aria-label="Wybierz gminę" data-i18n-aria="chooseCommune"><option value="" data-i18n="allCommunes">Wszystkie gminy</option></select>
                 <small id="gmina-hint" class="field-hint" data-i18n="communeHint">Wpisz fragment nazwy, potem wybierz gminę z listy.</small>
               </div>
+              <div id="parish-filter" class="filter-block" hidden>
+                <label class="field-label" for="parafia_katolicka-search" data-i18n="catholicParish">Parafia katolicka</label>
+                <input id="parafia_katolicka-search" type="search" placeholder="Znajdź nazwę parafii" data-i18n-placeholder="findParish" autocomplete="off" aria-describedby="parafia_katolicka-hint">
+                <select id="parafia_katolicka" aria-label="Wybierz parafię" data-i18n-aria="chooseParish"><option value="" data-i18n="allParishes">Wszystkie parafie</option></select>
+                <small id="parafia_katolicka-hint" class="field-hint" data-i18n="parishHint">Wpisz fragment nazwy, potem wybierz parafię z listy.</small>
+              </div>
+            </fieldset>
+            <fieldset id="information-options" class="information-options" hidden>
+              <legend data-i18n="informationFilters">Informacje w haśle</legend>
+              <p class="field-hint" data-i18n="informationFiltersHint">Wymagaj informacji o wszystkich zaznaczonych kategoriach. Brak adnotacji nie oznacza braku obiektu.</p>
+              <label class="checkbox-option"><input id="has_obiekty_sakralne" data-presence-filter type="checkbox"><span data-i18n="presenceReligiousSites">Obiekty sakralne</span></label>
+              <label class="checkbox-option"><input id="has_szkoły" data-presence-filter type="checkbox"><span data-i18n="presenceSchools">Szkoły</span></label>
+              <label class="checkbox-option"><input id="has_młyny" data-presence-filter type="checkbox"><span data-i18n="presenceMills">Młyny</span></label>
+              <label class="checkbox-option"><input id="has_przemysłowe" data-presence-filter type="checkbox"><span data-i18n="presenceIndustry">Zakłady przemysłowe</span></label>
+              <label class="checkbox-option"><input id="has_zabytki" data-presence-filter type="checkbox"><span data-i18n="presenceMonuments">Zabytki</span></label>
+              <label class="checkbox-option"><input id="has_archeo" data-presence-filter type="checkbox"><span data-i18n="presenceArchaeology">Znaleziska archeologiczne</span></label>
+              <label class="checkbox-option"><input id="has_opieka_zdrowotna" data-presence-filter type="checkbox"><span data-i18n="presenceHealthcare">Opieka zdrowotna</span></label>
+              <label class="checkbox-option"><input id="has_biblioteki" data-presence-filter type="checkbox"><span data-i18n="presenceLibraries">Biblioteki</span></label>
+              <label class="checkbox-option"><input id="has_uzdrowiska" data-presence-filter type="checkbox"><span data-i18n="presenceSpas">Uzdrowiska</span></label>
             </fieldset>
             <p id="filter-options-status" class="filter-message" role="status"></p>
           </section>
@@ -152,6 +175,7 @@
           <button type="button" class="suggestion" data-i18n="exampleOil">Co słownik mówi o wydobyciu ropy naftowej w Borysławiu?</button>
           <button type="button" class="suggestion" data-i18n="exampleKononowicze">Co wiadomo o miejscowości Kononowicze w powiecie oszmiańskim?</button>
           <button type="button" class="suggestion" data-i18n="exampleZyrardow">Ilu robotników pracowało w zakładach Żyrardowa i jakie wyroby tam wytwarzano?</button>
+          <button type="button" class="suggestion" data-i18n="exampleReligiousCount">W ilu hasłach pojawiają się informacje o obiektach sakralnych?</button>
         </div>
       </div>
       <div id="conversation-actions" class="conversation-actions" hidden>
@@ -173,21 +197,16 @@
 
     <section id="browse-view" class="view" role="tabpanel" aria-labelledby="tab-browse" hidden>
       <h1 class="sr-only" data-i18n="browsePageTitle">Przeglądanie haseł SGKP</h1>
+      <div class="browse-workspace filter-workspace">
+        <aside id="browse-filter-slot" class="filter-column" aria-label="Filtry" data-i18n-aria="filters">
+          <div class="filter-toolbar">
+            <button class="filter-toggle" data-filter-toggle type="button" aria-controls="filter-panel" aria-expanded="true"><span class="filter-toggle-icon" aria-hidden="true">‹</span><span class="filter-toggle-label">Filtry</span></button>
+            <button class="text-button filter-clear" data-clear-filters type="button" data-i18n="clear">Wyczyść</button>
+          </div>
+        </aside>
+        <div class="browse-content">
       <div class="browse-heading">
         <div><h2 data-i18n="browseHeading">Przeglądanie haseł</h2></div>
-        <form id="browse-filters" class="browse-filters">
-          <label class="browse-name-label" for="browse-name"><span data-i18n="browseName">Nazwa</span>
-            <input id="browse-name" type="search" maxlength="300" autocomplete="off" placeholder="Nazwa lub fragment nazwy" data-i18n-placeholder="browseNamePlaceholder">
-          </label>
-        <label class="browse-volume-label" for="browse-volume"><span data-i18n="browseVolume">Tom</span>
-          <select id="browse-volume" aria-label="Tom" data-i18n-aria="browseVolume">
-            <option value="01" selected>1</option><option value="02">2</option><option value="03">3</option><option value="04">4</option>
-            <option value="05">5</option><option value="06">6</option><option value="07">7</option><option value="08">8</option>
-            <option value="09">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option>
-            <option value="13">13</option><option value="14">14</option><option value="15">15 cz. 1</option><option value="16">15 cz. 2</option>
-          </select>
-        </label>
-        </form>
       </div>
       <div class="browse-results-toolbar">
         <p id="browse-status" role="status" data-i18n="browseInitial">Wybierz tom, aby wyświetlić listę haseł.</p>
@@ -217,6 +236,8 @@
         <button id="browse-next" class="button button-outline" type="button" disabled data-i18n="next">Następna →</button>
         <button id="browse-last" class="button button-outline" type="button" disabled data-i18n="lastPage">Koniec</button>
       </nav>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -246,6 +267,10 @@
         <h3 data-i18n="helpChatTitle">Konwersacja</h3>
         <p data-i18n="helpChatText">Zadaj pytanie o treść słownika. Odpowiedź powstaje na podstawie odnalezionych fragmentów haseł i zawiera odsyłacze do wykorzystanych źródeł. Otwórz cytowane hasła, aby sprawdzić odpowiedź. Możesz zadać pytanie doprecyzowujące odnoszące się do poprzednich odpowiedzi. Przycisk „Pobierz PDF” zapisuje bieżącą konwersację wraz ze źródłami; „Wyczyść rozmowę” usuwa ją z karty przeglądarki. Gdy model lokalny jest niedostępny, bieżące pytanie, krótka historia rozmowy i znalezione fragmenty są przesyłane do usługi OpenAI; aplikacja oznacza taką odpowiedź. Konwersacja nie służy do sporządzania pełnych zestawień wszystkich miejscowości.</p>
         <p data-i18n="helpChatTimeLimit">Serwer może przerwać obsługę pytania, jeśli przetwarzanie trwa dłużej niż 5 minut (300 sekund). Limit obejmuje wyszukiwanie źródeł, ich weryfikację i przygotowanie odpowiedzi. W takim przypadku spróbuj ponownie lub zawęź zakres pytania.</p>
+      </section>
+      <section>
+        <h3 data-i18n="helpBrowseTitle">Przeglądanie</h3>
+        <p data-i18n="helpBrowseText">Przeglądaj hasła indywidualne i elementy haseł zbiorczych, po 50 na stronie, w kolejności identyfikatorów. W panelu po lewej wybierz tom, wpisz nazwę lub jej fragment i ustaw pozostałe filtry. Lista odświeża się po każdej zmianie. Możesz przełączać widok listy i siatki oraz korzystać z nawigacji na górze i dole listy. Kliknij nazwę, aby otworzyć treść i metadane hasła. Podhasła są oznaczone jako elementy haseł zbiorczych i dziedziczą ich tom oraz stronę.</p>
       </section>
     </div>
   </dialog>

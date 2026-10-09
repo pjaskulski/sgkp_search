@@ -9,9 +9,17 @@ from pathlib import Path
 
 
 VOLUMES = tuple(f"{number:02d}" for number in range(1, 17))
+PRESENCE_FIELDS = {
+    f"has_{field}": field for field in (
+        "obiekty_sakralne", "szkoły", "młyny", "przemysłowe", "zabytki",
+        "archeo", "opieka_zdrowotna", "biblioteki", "uzdrowiska",
+    )
+}
+BOOLEAN_FILTER_FIELDS = ("jest_miejscowoscia", "królestwo_polskie", *PRESENCE_FIELDS)
 FILTER_FIELDS = (
     "tom", "rodzaj", "jest_miejscowoscia", "typ_punktu_osadniczego", "typ",
-    "powiat_ujednolicony", "gmina", "gubernia_ujednolicona", "królestwo_polskie",
+    "powiat_ujednolicony", "gmina", "parafia_katolicka", "gubernia_ujednolicona", "królestwo_polskie",
+    *PRESENCE_FIELDS,
 )
 COPY_FIELDS = (
     "typ", "typ_punktu_osadniczego", "powiat_ocr", "powiat_ujednolicony",
@@ -114,6 +122,21 @@ def validate(input_dir: Path) -> dict:
     return {"counts": counts, "sha256": hashes, "errors": errors, "warnings": warnings}
 
 
+def has_information(value) -> bool:
+    """Ignore absent annotations, empty containers and whitespace-only values."""
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, list):
+        return any(has_information(item) for item in value)
+    if isinstance(value, dict):
+        return any(has_information(item) for item in value.values())
+    return value is not None
+
+
+def presence_flags(source: dict) -> dict:
+    return {flag: has_information(source.get(field)) for flag, field in PRESENCE_FIELDS.items()}
+
+
 def normalize(row: dict, source_file: str, record_index: int, element: dict | None = None, element_index: int | None = None) -> dict:
     source = element if element is not None else row
     document = {
@@ -131,6 +154,7 @@ def normalize(row: dict, source_file: str, record_index: int, element: dict | No
     variants = source.get("warianty_nazw") or []
     document["warianty_nazw_text"] = [v["wariant_nazwy"] for v in variants if isinstance(v, dict) and isinstance(v.get("wariant_nazwy"), str)]
     document["jest_miejscowoscia"] = bool(source.get("typ_punktu_osadniczego"))
+    document.update(presence_flags(source))
     return document
 
 
@@ -159,6 +183,8 @@ def passages(entry: dict, max_chars: int = 1500, overlap: int = 120) -> list[dic
             if split > floor:
                 end = split + (2 if content[split:split + 2] == ". " else 1)
         item = {key: entry.get(key) for key in FILTER_FIELDS if key in entry}
+        for flag, present in presence_flags(entry).items():
+            item.setdefault(flag, present)
         item.update({
             "passage_id": f"{entry['ID']}_p{len(result) + 1:04d}", "entry_id": entry["ID"],
             "nazwa": entry["nazwa"], "parent_id": entry.get("parent_id"), "strona": entry["strona"],

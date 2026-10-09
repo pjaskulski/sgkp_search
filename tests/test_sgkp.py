@@ -424,7 +424,8 @@ class ApiTests(unittest.TestCase):
                  'invalid JSON', ServiceError("chat", message="timeout")]) as model:
             result = web.model_interpret_question(question, config, [])
             self.assertEqual(result, {"names": ["Okuniewie"], "district": "warszawski",
-                                      "many_localities": False})
+                                      "many_localities": False, "information_categories": [],
+                                      "count_entries": False})
             model.assert_called_once()
             result = web.model_interpret_question(question, config, [])
             self.assertEqual(result["district"], "warszawski")
