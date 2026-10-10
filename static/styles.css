@@ -178,6 +178,17 @@ select { appearance: auto; }
 .suggestion:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .suggestion { min-height: 54px; border: 1px solid #cbdbea; border-radius: 30px; background: white; color: var(--accent); padding: 11px 19px; text-align: center; font-size: 14px; }
 .suggestion:hover { border-color: var(--accent); background: #f1f6fc; }
+.more-examples { display: block; margin: 14px 0 0 auto; }
+.examples-dialog[open] { display: flex; flex-direction: column; width: min(760px, calc(100vw - 28px)); }
+.examples-controls { flex-shrink: 0; padding: 12px 30px; border-bottom: 1px solid var(--line); }
+.examples-controls > .field-hint { margin: 0 0 12px; }
+.examples-controls select { margin-bottom: 0; }
+.examples-controls .field-label { margin-top: 8px; }
+.examples-list { overflow-y: auto; min-height: 0; padding: 10px 30px 24px; }
+.examples-list h3 { margin: 14px 0 7px; color: var(--ink-soft); font: 600 14px "Segoe UI", "Noto Sans", Arial, sans-serif; }
+.example-choice { display: block; width: 100%; padding: 10px 0; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--accent); text-align: left; font-size: 14px; }
+.example-choice:hover { color: var(--ink); text-decoration: underline; }
+.examples-empty { padding: 0 30px 20px; color: var(--ink-soft); }
 .conversation-actions { position: sticky; top: 0; z-index: 4; display: flex; justify-content: flex-end; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); background: var(--paper); }
 .conversation-actions .button { min-height: 36px; padding: 7px 12px; font-size: 13px; }
 .conversation { display: grid; gap: 16px; margin: 20px 0; }

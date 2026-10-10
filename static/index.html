@@ -224,6 +224,7 @@
           <button type="button" class="suggestion" data-i18n="exampleZyrardow">Ilu robotników pracowało w zakładach Żyrardowa i jakie wyroby tam wytwarzano?</button>
           <button type="button" class="suggestion" data-i18n="exampleReligiousCount">W ilu hasłach pojawiają się informacje o obiektach sakralnych?</button>
         </div>
+        <button id="more-examples" class="text-button more-examples" type="button" aria-haspopup="dialog" aria-controls="examples-dialog" data-i18n="moreExamples">Więcej przykładów</button>
       </div>
       <div id="conversation-actions" class="conversation-actions" hidden>
         <button id="export-pdf" class="button button-outline" type="button" disabled data-i18n="downloadPdf">Pobierz PDF</button>
@@ -295,6 +296,29 @@
       <a class="footer-contact" href="mailto:lab.dariah@ihpan.edu.pl"><span aria-hidden="true">✉</span> <span data-i18n="contactLabel">Skontaktuj się z nami</span></a>
     </div>
   </footer>
+
+  <dialog id="examples-dialog" class="examples-dialog" aria-labelledby="examples-title">
+    <div class="dialog-head">
+      <h2 id="examples-title" data-i18n="exampleQuestions">Przykładowe pytania</h2>
+      <button id="close-examples" class="dialog-close" type="button" aria-label="Zamknij przykłady" data-i18n-aria="closeExamples">×</button>
+    </div>
+    <div class="examples-controls">
+      <p class="field-hint" data-i18n="examplesHint">Wybierz pytanie, aby wpisać je do Konwersacji. Przed wysłaniem możesz je zmienić i ustawić filtry.</p>
+      <label class="field-label" for="examples-search" data-i18n="findExample">Znajdź pytanie</label>
+      <input id="examples-search" type="search" data-i18n-placeholder="examplesSearchPlaceholder" placeholder="Wpisz słowo lub fragment pytania">
+      <label class="field-label" for="examples-category" data-i18n="examplesCategory">Temat</label>
+      <select id="examples-category">
+        <option value="" data-i18n="examplesAll">Wszystkie tematy</option>
+        <option value="places" data-i18n="examplesPlaces">Miejscowości</option>
+        <option value="economy" data-i18n="examplesEconomy">Gospodarka</option>
+        <option value="heritage" data-i18n="examplesHeritage">Kultura i dziedzictwo</option>
+        <option value="health" data-i18n="examplesHealth">Zdrowie i uzdrowiska</option>
+        <option value="counts" data-i18n="examplesCounts">Zliczanie haseł</option>
+      </select>
+    </div>
+    <div id="examples-list" class="examples-list"></div>
+    <p id="examples-empty" class="examples-empty" role="status" hidden data-i18n="examplesEmpty">Brak pytań pasujących do wybranych warunków.</p>
+  </dialog>
 
   <dialog id="help-dialog" class="help-dialog" aria-labelledby="help-title">
     <div class="dialog-head">

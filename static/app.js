@@ -69,6 +69,23 @@ const UI_COPY = {
     exampleArchaeology: "Jakie znaleziska archeologiczne znajdowały się w miejscowościach powiatu warszawskiego?", exampleGlassworks: "W których miejscowościach znajdowały się huty szkła?",
     exampleOil: "Co słownik mówi o wydobyciu ropy naftowej w Borysławiu?", exampleKononowicze: "Co wiadomo o miejscowości Kononowicze w powiecie oszmiańskim?",
     exampleZyrardow: "Ilu robotników pracowało w zakładach Żyrardowa i jakie wyroby tam wytwarzano?", downloadPdf: "Pobierz PDF",
+    moreExamples: 'Więcej przykładów',
+    closeExamples: 'Zamknij przykłady',
+    findExample: 'Znajdź pytanie',
+    examplesSearchPlaceholder: 'Wpisz słowo lub fragment pytania',
+    examplesCategory: 'Temat',
+    examplesAll: 'Wszystkie tematy',
+    examplesPlaces: 'Miejscowości',
+    examplesEconomy: 'Gospodarka',
+    examplesHeritage: 'Kultura i dziedzictwo',
+    examplesHealth: 'Zdrowie i uzdrowiska',
+    examplesCounts: 'Zliczanie haseł',
+    examplesEmpty: 'Brak pytań pasujących do wybranych warunków.',
+    examplesHint: 'Wybierz pytanie, aby wpisać je do Konwersacji. Przed wysłaniem możesz je zmienić i ustawić filtry.',
+    exampleSpasCount: 'W ilu hasłach pojawiają się informacje o uzdrowiskach?',
+    exampleLibrariesCount: 'W ilu hasłach pojawiają się informacje o bibliotekach?',
+    exampleBarczaca: 'Co wiadomo o miejscowości Barcząca?',
+    exampleCustomsCount: 'W ilu hasłach pojawiają się informacje o urzędach i obiektach celnych?',
     exampleReligiousCount: "W ilu hasłach pojawiają się informacje o obiektach sakralnych?",
     clearConversation: "Wyczyść rozmowę", yourQuestion: "Twoje pytanie",
     questionPlaceholder: "Zapytaj o miejscowość, osobę lub zagadnienie opisane w słowniku…", ask: "Zapytaj",
@@ -192,6 +209,23 @@ const UI_COPY = {
     exampleArchaeology: "What archaeological finds were reported in localities in Warsaw County?", exampleGlassworks: "Which localities had glassworks?",
     exampleOil: "What does the dictionary say about oil extraction in Borysław?", exampleKononowicze: "What is known about the locality of Kononowicze in Oszmiana County?",
     exampleZyrardow: "How many workers were employed in Żyrardów's factories, and what products were made there?", downloadPdf: "Download PDF",
+    moreExamples: 'More examples',
+    closeExamples: 'Close examples',
+    findExample: 'Find a question',
+    examplesSearchPlaceholder: 'Enter a word or part of a question',
+    examplesCategory: 'Topic',
+    examplesAll: 'All topics',
+    examplesPlaces: 'Localities',
+    examplesEconomy: 'Economy',
+    examplesHeritage: 'Culture and heritage',
+    examplesHealth: 'Healthcare and spas',
+    examplesCounts: 'Entry counts',
+    examplesEmpty: 'No questions match the selected criteria.',
+    examplesHint: 'Select a question to enter it in the Conversation field. You can edit it and set filters before sending.',
+    exampleSpasCount: 'How many entries contain information about spas?',
+    exampleLibrariesCount: 'How many entries contain information about libraries?',
+    exampleBarczaca: 'What is known about the locality of Barcząca?',
+    exampleCustomsCount: 'How many entries contain information about customs offices and facilities?',
     exampleReligiousCount: "How many entries contain information about religious buildings?",
     clearConversation: "Clear conversation", yourQuestion: "Your question",
     questionPlaceholder: "Ask about a place, person, or subject described in the dictionary…", ask: "Ask",
@@ -254,6 +288,14 @@ const UI_COPY = {
     sourceFallback: "Source"
   }
 };
+// Add new examples here, with corresponding Polish and English UI_COPY strings.
+const EXAMPLE_GROUPS = [
+  {category: "places", label: "examplesPlaces", questions: ["exampleKingdom", "exampleSettlements", "exampleZawady", "exampleKononowicze", "exampleBarczaca"]},
+  {category: "economy", label: "examplesEconomy", questions: ["exampleGlassworks", "exampleOil", "exampleZyrardow"]},
+  {category: "heritage", label: "examplesHeritage", questions: ["exampleArchaeology"]},
+  {category: "health", label: "examplesHealth", questions: ["exampleSpas"]},
+  {category: "counts", label: "examplesCounts", questions: ["exampleReligiousCount", "exampleSpasCount", "exampleLibrariesCount", "exampleCustomsCount"]},
+];
 let currentLanguage = "pl";
 const state = { page: 1, hasNext: false, entry: null, highlight: null, request: 0, gminas: [], parishes: [], chatBusy: false,
   chatController: null, chatGeneration: 0, chatHistory: [], exportTurns: [], searchData: null, searchOffsets: {},
@@ -311,9 +353,37 @@ function applyLanguage(language, persist = false) {
   if (state.searchData) renderSearchResults(state.searchData);
   if (state.browseData) renderBrowseResults(state.browseData);
   if (state.entry) renderEntry();
+  if ($("examples-dialog").open) renderExamples();
   if (persist) {
     try { localStorage.setItem(LANGUAGE_STORAGE_KEY, currentLanguage); } catch { /* Keep current language for this page. */ }
   }
+}
+function renderExamples() {
+  const query = $("examples-search").value.trim().toLocaleLowerCase(currentLanguage);
+  const category = $("examples-category").value;
+  const list = $("examples-list");
+  list.replaceChildren();
+  for (const group of EXAMPLE_GROUPS) {
+    if (category && category !== group.category) continue;
+    const questions = group.questions.filter(key => t(key).toLocaleLowerCase(currentLanguage).includes(query));
+    if (!questions.length) continue;
+    const section = element("section");
+    section.append(element("h3", t(group.label)));
+    for (const key of questions) {
+      const button = element("button", t(key), "example-choice");
+      button.type = "button";
+      button.addEventListener("click", () => {
+        $("question").value = t(key);
+        $("examples-dialog").close();
+        $("question").focus();
+        $("question").scrollIntoView({block: "center", behavior: "smooth"});
+      });
+      section.append(button);
+    }
+    list.append(section);
+  }
+  $("examples-empty").hidden = list.children.length > 0;
+  list.scrollTop = 0;
 }
 function storedLanguage() {
   try { return localStorage.getItem(LANGUAGE_STORAGE_KEY) === "en" ? "en" : "pl"; }
@@ -1316,6 +1386,14 @@ async function initialize() {
     switchView(view, false);
     if (view === "przegladanie") loadBrowse(1);
   });
+  $("more-examples").addEventListener("click", () => {
+    renderExamples();
+    $("examples-dialog").showModal();
+    $("examples-search").focus();
+  });
+  $("close-examples").addEventListener("click", () => $("examples-dialog").close());
+  $("examples-search").addEventListener("input", renderExamples);
+  $("examples-category").addEventListener("change", renderExamples);
   $("open-help").addEventListener("click", () => $("help-dialog").showModal());
   $("close-help").addEventListener("click", () => $("help-dialog").close());
   $("search-form").addEventListener("submit", event => { event.preventDefault(); search(1); });
