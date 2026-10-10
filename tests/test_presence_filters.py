@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 from urllib.parse import urlparse, parse_qs
 
 import app as web
-from sgkp_core import PRESENCE_FIELDS, normalize, passages, presence_flags
+from sgkp_core import PRESENCE_FIELDS, PRESENCE_FIELD_VERSIONS, PRESENCE_FILTER_VERSION, normalize, passages, presence_flags
 from sgkp_services import filter_expression
 from sgkp_enable_presence_filters import stage_documents, update_indexes
 
@@ -44,18 +44,20 @@ class PresenceTests(unittest.TestCase):
         row = {"ID": "01-00001", "nazwa": "Młyn", "text": "Szkoła i biblioteka.",
                "rodzaj": "indywidualne", "tom": "01", "strona": 1,
                "młyny": ["  "], "szkoły": ["szkoła"], "archeo": [],
-               "uzdrowiska": ["zakład kąpielowy"]}
+               "uzdrowiska": ["zakład kąpielowy"], "celne": ["komora celna"]}
         flags = presence_flags(row)
         self.assertFalse(flags["has_młyny"])
         self.assertFalse(flags["has_biblioteki"])
         self.assertTrue(flags["has_szkoły"])
         self.assertTrue(flags["has_uzdrowiska"])
+        self.assertTrue(flags["has_celne"])
         indexed = normalize(row, "sgkp_01.json", 0)
         self.assertEqual({key: indexed[key] for key in PRESENCE_FIELDS}, flags)
         self.assertTrue(passages(indexed)[0]["has_szkoły"])
         self.assertTrue(passages(row)[0]["has_szkoły"])
-        child = {**row, "ID": "01-00001-001", "nr": "1", "szkoły": []}
+        child = {**row, "ID": "01-00001-001", "nr": "1", "szkoły": [], "celne": []}
         self.assertFalse(normalize(row, "sgkp_01.json", 0, child, 0)["has_szkoły"])
+        self.assertFalse(normalize(row, "sgkp_01.json", 0, child, 0)["has_celne"])
 
     def test_boolean_filters_and_historical_source_matching(self):
         for flag in PRESENCE_FIELDS:
@@ -79,6 +81,20 @@ class PresenceTests(unittest.TestCase):
                  "names": [], "district": None, "many_localities": False}), \
              patch.object(web, "model_metadata_searches", return_value=[]):
             self.assertTrue(client.get("/api/v1/filter-options").json["presence_filters_available"])
+            self.assertNotIn("has_celne", client.get("/api/v1/filter-options").json["presence_filter_fields"])
+            config["presence_filters_version"] = 2
+            self.assertIn("has_celne", client.get("/api/v1/filter-options").json["presence_filter_fields"])
+            self.assertNotIn("has_poczta", client.get("/api/v1/filter-options").json["presence_filter_fields"])
+            config["presence_filters_version"] = 3
+            available = client.get("/api/v1/filter-options").json["presence_filter_fields"]
+            for field in ("budownictwo_palacowe", "poczta", "stacje_drogi_zelaznej", "handel", "rzemioslo"):
+                self.assertIn("has_" + field, available)
+            for flag, version in PRESENCE_FIELD_VERSIONS.items():
+                if version == 4:
+                    self.assertNotIn(flag, available)
+            config["presence_filters_version"] = PRESENCE_FILTER_VERSION
+            self.assertEqual(set(client.get("/api/v1/filter-options").json["presence_filter_fields"]),
+                             set(PRESENCE_FIELDS))
             response = client.get("/api/v1/search", query_string={
                 "q": "szkoła", "mode": "text", "has_szkoły": "true", "has_biblioteki": "true"})
             self.assertEqual(response.status_code, 200)

@@ -21,6 +21,7 @@
         <button id="tab-browse" class="nav-tab" type="button" role="tab" aria-controls="browse-view" aria-selected="false" data-i18n="browseTab">Przeglądanie</button>
       </nav>
       <div class="header-actions">
+        <span class="app-version">&quot;beta&quot; v. <span>{{ app_version }}</span></span>
         <button id="theme-toggle" class="theme-button" type="button" aria-pressed="false" aria-label="Tryb dzienny. Włącz tryb nocny" title="Zmień motyw" data-i18n-title="themeToggleTitle">
           <span class="theme-icon theme-day" aria-hidden="true">☀</span><span class="theme-icon theme-night" aria-hidden="true">☾</span>
         </button>
@@ -85,6 +86,7 @@
               <legend class="field-label" data-i18n="entryScope">Zakres haseł</legend>
               <label class="radio-option"><input type="radio" name="locality" value="all"><span data-i18n="allEntries">Wszystkie hasła</span></label>
               <label class="radio-option"><input type="radio" name="locality" value="only" checked><span data-i18n="placesOnly">Tylko miejscowości</span></label>
+              <label class="radio-option"><input type="radio" name="locality" value="nonlocalities"><span data-i18n="nonPlacesOnly">Tylko hasła niebędące miejscowościami</span></label>
             </fieldset>
             <fieldset id="locality-options" class="locality-options" disabled>
               <legend data-i18n="localityFilters">Filtry miejscowości</legend>
@@ -111,18 +113,63 @@
                 <small id="parafia_katolicka-hint" class="field-hint" data-i18n="parishHint">Wpisz fragment nazwy, potem wybierz parafię z listy.</small>
               </div>
             </fieldset>
+            <fieldset id="other-entry-options" class="locality-options" disabled>
+              <legend data-i18n="otherEntries">Inne hasła</legend>
+              <p id="other-entry-hint" class="field-hint" data-i18n="otherEntriesAvailability">Dostępne po wybraniu „Tylko hasła niebędące miejscowościami”.</p>
+              <div class="filter-block">
+                <label class="field-label" for="typ" data-i18n="entryType">Typ</label>
+                <select id="typ"><option value="" data-i18n="allTypes">Wszystkie typy</option></select>
+              </div>
+            </fieldset>
             <fieldset id="information-options" class="information-options" hidden>
               <legend data-i18n="informationFilters">Informacje w haśle</legend>
               <p class="field-hint" data-i18n="informationFiltersHint">Wymagaj informacji o wszystkich zaznaczonych kategoriach. Brak adnotacji nie oznacza braku obiektu.</p>
-              <label class="checkbox-option"><input id="has_obiekty_sakralne" data-presence-filter type="checkbox"><span data-i18n="presenceReligiousSites">Obiekty sakralne</span></label>
-              <label class="checkbox-option"><input id="has_szkoły" data-presence-filter type="checkbox"><span data-i18n="presenceSchools">Szkoły</span></label>
-              <label class="checkbox-option"><input id="has_młyny" data-presence-filter type="checkbox"><span data-i18n="presenceMills">Młyny</span></label>
-              <label class="checkbox-option"><input id="has_przemysłowe" data-presence-filter type="checkbox"><span data-i18n="presenceIndustry">Zakłady przemysłowe</span></label>
-              <label class="checkbox-option"><input id="has_zabytki" data-presence-filter type="checkbox"><span data-i18n="presenceMonuments">Zabytki</span></label>
-              <label class="checkbox-option"><input id="has_archeo" data-presence-filter type="checkbox"><span data-i18n="presenceArchaeology">Znaleziska archeologiczne</span></label>
-              <label class="checkbox-option"><input id="has_opieka_zdrowotna" data-presence-filter type="checkbox"><span data-i18n="presenceHealthcare">Opieka zdrowotna</span></label>
-              <label class="checkbox-option"><input id="has_biblioteki" data-presence-filter type="checkbox"><span data-i18n="presenceLibraries">Biblioteki</span></label>
-              <label class="checkbox-option"><input id="has_uzdrowiska" data-presence-filter type="checkbox"><span data-i18n="presenceSpas">Uzdrowiska</span></label>
+              <details class="information-group" open>
+                <summary data-i18n="informationHeritage">Obiekty i dziedzictwo</summary>
+                <label class="checkbox-option"><input id="has_obiekty_sakralne" data-presence-filter type="checkbox"><span data-i18n="presenceReligiousSites">Obiekty sakralne</span></label>
+                <label class="checkbox-option"><input id="has_budownictwo_palacowe" data-presence-filter type="checkbox"><span data-i18n="presenceManors">Dwory i pałace</span></label>
+                <label class="checkbox-option"><input id="has_zabytki" data-presence-filter type="checkbox"><span data-i18n="presenceMonuments">Zabytki</span></label>
+                <label class="checkbox-option"><input id="has_archeo" data-presence-filter type="checkbox"><span data-i18n="presenceArchaeology">Znaleziska archeologiczne</span></label>
+                <label class="checkbox-option"><input id="has_architektura_krajobrazu" data-presence-filter type="checkbox"><span data-i18n="presenceGardens">Ogrody i architektura krajobrazu</span></label>
+                <label class="checkbox-option"><input id="has_nekropolie" data-presence-filter type="checkbox"><span data-i18n="presenceCemeteries">Nekropolie</span></label>
+              </details>
+              <details class="information-group" open>
+                <summary data-i18n="informationEconomy">Gospodarka</summary>
+                <label class="checkbox-option"><input id="has_przemysłowe" data-presence-filter type="checkbox"><span data-i18n="presenceIndustry">Zakłady przemysłowe</span></label>
+                <label class="checkbox-option"><input id="has_młyny" data-presence-filter type="checkbox"><span data-i18n="presenceMills">Młyny</span></label>
+                <label class="checkbox-option"><input id="has_rzemioslo" data-presence-filter type="checkbox"><span data-i18n="presenceCrafts">Rzemiosło</span></label>
+                <label class="checkbox-option"><input id="has_handel" data-presence-filter type="checkbox"><span data-i18n="presenceTrade">Handel</span></label>
+                <label class="checkbox-option"><input id="has_hodowla" data-presence-filter type="checkbox"><span data-i18n="presenceBreeding">Hodowla</span></label>
+              </details>
+              <details class="information-group" open>
+                <summary data-i18n="informationTransport">Transport i łączność</summary>
+                <label class="checkbox-option"><input id="has_poczta" data-presence-filter type="checkbox"><span data-i18n="presencePost">Poczta i telegraf</span></label>
+                <label class="checkbox-option"><input id="has_stacje_drogi_zelaznej" data-presence-filter type="checkbox"><span data-i18n="presenceRailway">Stacje kolejowe</span></label>
+                <label class="checkbox-option"><input id="has_celne" data-presence-filter type="checkbox"><span data-i18n="presenceCustoms">Urzędy i obiekty celne</span></label>
+                <label class="checkbox-option"><input id="has_żegluga" data-presence-filter type="checkbox"><span data-i18n="presenceNavigation">Żegluga i przeprawy</span></label>
+              </details>
+              <details class="information-group" open>
+                <summary data-i18n="informationAdministration">Urzędy, sądy i wojsko</summary>
+                <label class="checkbox-option"><input id="has_urzędy" data-presence-filter type="checkbox"><span data-i18n="presenceOffices">Urzędy</span></label>
+                <label class="checkbox-option"><input id="has_sądy" data-presence-filter type="checkbox"><span data-i18n="presenceCourts">Sądy</span></label>
+                <label class="checkbox-option"><input id="has_wojsko" data-presence-filter type="checkbox"><span data-i18n="presenceMilitary">Wojsko</span></label>
+              </details>
+              <details class="information-group" open>
+                <summary data-i18n="informationServices">Edukacja, zdrowie i dobroczynność</summary>
+                <label class="checkbox-option"><input id="has_szkoły" data-presence-filter type="checkbox"><span data-i18n="presenceSchools">Szkoły</span></label>
+                <label class="checkbox-option"><input id="has_opieka_zdrowotna" data-presence-filter type="checkbox"><span data-i18n="presenceHealthcare">Opieka zdrowotna</span></label>
+                <label class="checkbox-option"><input id="has_uzdrowiska" data-presence-filter type="checkbox"><span data-i18n="presenceSpas">Uzdrowiska</span></label>
+                <label class="checkbox-option"><input id="has_dobroczynnosc" data-presence-filter type="checkbox"><span data-i18n="presenceCharity">Dobroczynność</span></label>
+                <label class="checkbox-option"><input id="has_bursa" data-presence-filter type="checkbox"><span data-i18n="presenceBursas">Bursy</span></label>
+              </details>
+              <details class="information-group" open>
+                <summary data-i18n="informationCulture">Kultura i książka</summary>
+                <label class="checkbox-option"><input id="has_biblioteki" data-presence-filter type="checkbox"><span data-i18n="presenceLibraries">Biblioteki</span></label>
+                <label class="checkbox-option"><input id="has_kolekcjonerstwo" data-presence-filter type="checkbox"><span data-i18n="presenceCollections">Kolekcjonerstwo</span></label>
+                <label class="checkbox-option"><input id="has_drukarnie" data-presence-filter type="checkbox"><span data-i18n="presencePrinting">Drukarnie</span></label>
+                <label class="checkbox-option"><input id="has_muzealnictwo" data-presence-filter type="checkbox"><span data-i18n="presenceMuseums">Muzealnictwo</span></label>
+                <label class="checkbox-option"><input id="has_księgarnie" data-presence-filter type="checkbox"><span data-i18n="presenceBookshops">Księgarnie</span></label>
+              </details>
             </fieldset>
             <p id="filter-options-status" class="filter-message" role="status"></p>
           </section>

@@ -27,6 +27,8 @@ a { color: var(--accent); }
 .brand-copy { color: var(--ink); font-size: 16px; font-weight: 700; letter-spacing: .005em; line-height: 1.2; }
 .primary-nav { display: flex; align-items: center; gap: 9px; align-self: stretch; }
 .header-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.app-version { color: var(--ink-soft); font-size: 11px; white-space: nowrap; margin-right: 16px; }
+.app-version span { font-variant-numeric: tabular-nums; }
 .nav-tab { border: 0; border-bottom: 3px solid transparent; border-radius: 0; background: none; padding: 5px 20px 0; color: #637790; white-space: nowrap; font-weight: 600; }
 .nav-tab:hover { color: var(--ink); background: #f1f5fb; }
 .nav-tab[aria-selected="true"] { color: var(--accent-dark); border-color: var(--accent); background: #eaf2fc; }
@@ -115,8 +117,12 @@ select { appearance: auto; }
 .locality-choice legend { padding: 0; }
 .radio-option, .checkbox-option { display: flex; align-items: flex-start; gap: 10px; margin: 11px 0; color: #3e5874; font-size: 14px; cursor: pointer; }
 .radio-option input, .checkbox-option input { width: 17px; height: 17px; flex-shrink: 0; margin: 2px 0 0; accent-color: var(--accent); }
-.information-options { border: 0; padding: 12px 0 0; margin: 20px 0 0; border-top: 1px solid var(--line); }
+.information-options { border: 0; padding: 8px 0 0; margin: 32px 0 0; border-top: 1px solid var(--line); }
 .information-options legend { padding: 0; color: var(--ink-soft); font-size: 13px; font-weight: 700; }
+.information-options > .field-hint { margin: 0 0 14px; }
+.information-group { margin-top: 12px; }
+.information-group summary { cursor: pointer; color: var(--ink-soft); font-size: 13px; font-weight: 650; padding: 5px 0; }
+.information-group[open] summary { margin-bottom: 5px; }
 .locality-options { border: 0; padding: 12px 0 0; margin: 14px 0 0; border-top: 1px solid var(--line); }
 .locality-options legend { padding: 0; color: #344d68; font-size: 13px; font-weight: 700; }
 .locality-options > .field-hint { margin: 7px 0 12px; }

@@ -7,7 +7,7 @@ import sqlite3
 import tempfile
 from urllib.parse import quote, urlencode
 
-from sgkp_core import PRESENCE_FIELDS, file_hash, iter_entries, source_files
+from sgkp_core import PRESENCE_FIELDS, PRESENCE_FILTER_VERSION, file_hash, iter_entries, source_files
 from sgkp_services import Meili, ROOT
 
 
@@ -115,7 +115,7 @@ def main():
             raise ValueError(f"Źródło zmieniło się podczas aktualizacji: {path.name}")
     if args.manifest.read_bytes() != original:
         raise ValueError("Manifest zmienił się podczas aktualizacji; nie nadpisuję go")
-    config["presence_filters_version"] = 1
+    config["presence_filters_version"] = PRESENCE_FILTER_VERSION
     config["catholic_parish_filter_version"] = 1
     temporary = args.manifest.with_suffix(".presence.tmp")
     temporary.write_text(json.dumps(config, ensure_ascii=False, indent=2) + "\n")

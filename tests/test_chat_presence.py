@@ -3,9 +3,54 @@ import unittest
 from unittest.mock import patch
 
 import app as web
+from sgkp_core import PRESENCE_FIELDS, PRESENCE_FIELD_VERSIONS, PRESENCE_FILTER_VERSION
 
 
 class ChatPresenceTests(unittest.TestCase):
+    def test_new_categories_have_source_evidence_counts_and_version_guard(self):
+        fields = tuple(field for flag, field in PRESENCE_FIELDS.items() if PRESENCE_FIELD_VERSIONS[flag] >= 3)
+        config = {"source_dir": "/tmp", "lookup_db": "/tmp/lookup", "entries_index": "e",
+                  "presence_filters_version": PRESENCE_FILTER_VERSION}
+        web.annotated_entry_count.cache_clear()
+        for field in fields:
+            with self.subTest(field=field):
+                with patch.object(web, "preliminary_chat_answer", return_value=json.dumps({
+                        "names": [], "information_categories": [field], "count_entries": True})):
+                    interpretation = web.model_interpret_question("Ile haseł zawiera adnotacje?", {}, [], False)
+                self.assertEqual(interpretation["information_categories"], [field])
+                self.assertTrue(interpretation["count_entries"])
+                with patch.object(web, "iter_entries", return_value=iter([
+                        {"has_" + field: True}, {"has_" + field: False}])):
+                    self.assertEqual(web.annotated_entry_count("/tmp", field, (), (field,)), 1)
+                with patch.object(web.Meili, "search") as search:
+                    self.assertEqual(web.presence_passage_candidates({"presence_filters_version": PRESENCE_FIELD_VERSIONS["has_" + field] - 1}, [field], []), [])
+                    search.assert_not_called()
+                raw = {"ID": "01-00001", "nazwa": "A", "text": "Opis obiektu.", field: ["adnotacja obiektu"]}
+                with patch.object(web.Meili, "search", return_value={"hits": [{"ID": raw["ID"]}]}) as search, \
+                     patch.object(web, "source_detail", return_value={"entry": raw, "tom": "01", "strona": 1}):
+                    sources = web.presence_passage_candidates(config, [field], [])
+                self.assertEqual(sources[0][field], raw[field])
+                self.assertIn(f"has_{field} = true", search.call_args.args[1]["filter"])
+                self.assertIn("adnotacja obiektu", web.source_metadata_text(sources[0]))
+        web.annotated_entry_count.cache_clear()
+
+    def test_customs_interpretation_evidence_and_count(self):
+        with patch.object(web, "preliminary_chat_answer", return_value=json.dumps({
+                "names": [], "district": None, "many_localities": False,
+                "information_categories": ["celne"], "count_entries": True})):
+            result = web.model_interpret_question("W ilu hasłach opisano urzędy celne?", {}, [], False)
+        self.assertEqual(result["information_categories"], ["celne"])
+        self.assertTrue(result["count_entries"])
+        self.assertIn("komora celna", web.source_metadata_text({"celne": ["komora celna"]}))
+        web.annotated_entry_count.cache_clear()
+        with patch.object(web, "iter_entries", return_value=iter([
+                {"has_celne": True}, {"has_celne": False}])):
+            self.assertEqual(web.annotated_entry_count("/tmp/customs", "test", (), ("celne",)), 1)
+        web.annotated_entry_count.cache_clear()
+        with patch.object(web.Meili, "search") as search:
+            self.assertEqual(web.presence_passage_candidates({"presence_filters_version": 1}, ["celne"], []), [])
+            search.assert_not_called()
+
     def test_interpretation_validates_categories_and_count_intent(self):
         with patch.object(web, "preliminary_chat_answer", return_value=json.dumps({
             "names": [], "many_localities": True,

@@ -13,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
-from sgkp_core import FILTER_FIELDS, file_hash, normalize, passages, read_volume, source_files, validate
+from sgkp_core import FILTER_FIELDS, PRESENCE_FILTER_VERSION, file_hash, normalize, passages, read_volume, source_files, validate
 from sgkp_qa import check as check_index
 from sgkp_services import Embeddings, Meili, ROOT, ServiceError
 
@@ -170,7 +170,7 @@ def ingest(input_dir: Path, output_dir: Path, suffix: str, with_vectors: bool, e
         "entries_index": entries_index, "passages_index": passages_index,
         "lookup_db": str(lookup_path.resolve()), "counts": {"entries": entry_count, "passages": passage_count},
         "vectors": with_vectors, "embedding_model": embedding.model if embedding else None,
-        "presence_filters_version": 1,
+        "presence_filters_version": PRESENCE_FILTER_VERSION,
         "catholic_parish_filter_version": 1,
     }
     versioned_path = output_dir / f"manifest_{suffix}.json"

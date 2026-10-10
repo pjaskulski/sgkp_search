@@ -11,8 +11,8 @@ from functools import lru_cache
 from io import BytesIO
 from pathlib import Path
 
-from flask import Flask, Response, jsonify, request, send_file, send_from_directory
-from sgkp_core import BOOLEAN_FILTER_FIELDS, FILTER_FIELDS, PRESENCE_FIELDS, iter_entries, normalize, passages
+from flask import Flask, Response, jsonify, request, send_file, send_from_directory, render_template_string
+from sgkp_core import BOOLEAN_FILTER_FIELDS, FILTER_FIELDS, PRESENCE_FIELDS, PRESENCE_FIELD_VERSIONS, iter_entries, normalize, passages
 from sgkp_pdf import MAX_EXPORT_BYTES, render_chat_pdf, validate_export_turns
 from sgkp_render import render_entry_markdown
 from sgkp_chat_progress import report_progress, streamed_preparation
@@ -43,6 +43,24 @@ CHAT_INFORMATION_LABELS = {
     "archeo": ("archeologii", "archaeology"),
     "opieka_zdrowotna": ("opiece zdrowotnej", "healthcare"),
     "biblioteki": ("bibliotekach", "libraries"), "uzdrowiska": ("uzdrowiskach", "spas"),
+    "celne": ("urzędach i obiektach celnych", "customs offices and facilities"),
+    "budownictwo_palacowe": ("dworach i pałacach", "manor houses and palaces"),
+    "poczta": ("poczcie i telegrafie", "postal and telegraph services"),
+    "stacje_drogi_zelaznej": ("stacjach kolejowych", "railway stations"),
+    "handel": ("handlu", "trade"), "rzemioslo": ("rzemiośle", "crafts"),
+    'urzędy': ('urzędach', 'offices'),
+    'architektura_krajobrazu': ('ogrodach i architekturze krajobrazu', 'gardens and landscape architecture'),
+    'hodowla': ('hodowli', 'animal husbandry'),
+    'nekropolie': ('nekropoliach', 'cemeteries'),
+    'dobroczynnosc': ('dobroczynności', 'charity'),
+    'sądy': ('sądach', 'courts'),
+    'wojsko': ('wojsku', 'military'),
+    'żegluga': ('żegludze i przeprawach', 'navigation and crossings'),
+    'kolekcjonerstwo': ('kolekcjonerstwie', 'collecting'),
+    'drukarnie': ('drukarniach', 'printing houses'),
+    'muzealnictwo': ('muzealnictwie', 'museums'),
+    'księgarnie': ('księgarniach', 'bookshops'),
+    'bursa': ('bursach', 'student boarding houses'),
 }
 CHAT_EVIDENCE_METADATA_FIELDS = tuple(dict.fromkeys((*CHAT_METADATA_FIELDS, *CHAT_INFORMATION_LABELS)))
 CHAT_PASSAGES_PER_ENTRY = 3
@@ -60,6 +78,7 @@ HIGHLIGHT_START = "⟪SGKP-HL⟫"
 HIGHLIGHT_END = "⟪/SGKP-HL⟫"
 _manifest_lock = threading.Lock()
 _manifest_version = None
+APP_VER = "20261010"
 
 
 def manifest() -> dict:
@@ -181,8 +200,8 @@ def model_interpret_question(question: str, config: dict, history: list,
          "Zwróć wyłącznie JSON: names (lista nazw), district "
          "(wartość z listy powiatów albo null), many_localities (true albo false), "
          "information_categories (lista kategorii), count_entries (true albo false). "
-         "information_categories: wybierz wyłącznie spośród obiekty_sakralne, szkoły, młyny, "
-         "przemysłowe, zabytki, archeo, opieka_zdrowotna, biblioteki, uzdrowiska. "
+         "information_categories: wybierz wyłącznie klucze z mapy kategorii: "
+         f"{json.dumps({field: labels[0] for field, labels in CHAT_INFORMATION_LABELS.items()}, ensure_ascii=False)}. "
          "Kategorie wskazują obecność informacji; dla węższego tematu można wskazać kategorię nadrzędną. "
          "Nie zaznaczaj kategorii wykluczonych przez pytanie. count_entries: true wyłącznie gdy "
          "użytkownik chce policzyć hasła lub podhasła z informacjami o CAŁEJ wskazanej kategorii. "
@@ -551,7 +570,8 @@ def annotated_entry_count(source_dir: str, version: str | None,
 
 @timed_stage("wyszukiwanie według obecności informacji")
 def presence_passage_candidates(config: dict, categories: list[str], expression: list[str]) -> list[dict]:
-    if not categories or config.get("presence_filters_version") != 1:
+    if (not categories or any(config.get("presence_filters_version", 0)
+            < PRESENCE_FIELD_VERSIONS.get(f"has_{field}", 999) for field in categories)):
         return []
     try:
         entries = Meili().search(config["entries_index"], {
@@ -1126,7 +1146,8 @@ def service_error_message(exc: ServiceError) -> str:
 
 @app.get("/")
 def home():
-    return send_from_directory(app.static_folder, "index.html")
+    html = (Path(app.static_folder) / "index.html").read_text(encoding="utf-8")
+    return render_template_string(html, app_version=APP_VER)
 
 
 @app.get("/api/v1/search")
@@ -1247,7 +1268,7 @@ def facets():
 def cached_filter_options(source_dir: str, version: str | None) -> dict[str, list[str]]:
     """Complete dropdown values from the source used by the active index."""
     names = {key: set() for key in (
-        "tom", "powiat_ujednolicony", "typ_punktu_osadniczego", "gmina", "parafia_katolicka", "gubernia_ujednolicona"
+        "tom", "powiat_ujednolicony", "typ", "typ_punktu_osadniczego", "gmina", "parafia_katolicka", "gubernia_ujednolicona"
     )}
     for entry in iter_entries(Path(source_dir)):
         for key in ("tom", "powiat_ujednolicony"):
@@ -1255,6 +1276,10 @@ def cached_filter_options(source_dir: str, version: str | None) -> dict[str, lis
             if isinstance(value, str) and value.strip():
                 names[key].add(value.strip())
         if not entry["jest_miejscowoscia"]:
+            value = entry.get("typ")
+            for item in (value if isinstance(value, list) else [value]):
+                if isinstance(item, str) and item.strip():
+                    names["typ"].add(item.strip())
             continue
         for key in ("typ_punktu_osadniczego", "gmina", "parafia_katolicka", "gubernia_ujednolicona"):
             value = entry.get(key)
@@ -1265,6 +1290,8 @@ def cached_filter_options(source_dir: str, version: str | None) -> dict[str, lis
                 name = item.strip()
                 if name and (key not in ("gmina", "parafia_katolicka") or name[0].isalpha()):
                     names[key].add(name)
+    settlement_types = {value.casefold() for value in names["typ_punktu_osadniczego"]}
+    names["typ"] = {value for value in names["typ"] if value.casefold() not in settlement_types}
     return {key: sorted(values, key=str.casefold) for key, values in names.items()}
 
 
@@ -1272,7 +1299,9 @@ def cached_filter_options(source_dir: str, version: str | None) -> dict[str, lis
 def filter_options():
     config = manifest()
     return jsonify({"options": cached_filter_options(config["source_dir"], config.get("created_at")),
-                    "presence_filters_available": config.get("presence_filters_version") == 1,
+                    "presence_filters_available": config.get("presence_filters_version", 0) >= 1,
+                    "presence_filter_fields": [field for field in PRESENCE_FIELDS
+                        if config.get("presence_filters_version", 0) >= PRESENCE_FIELD_VERSIONS[field]],
                     "catholic_parish_filter_available": config.get("catholic_parish_filter_version") == 1})
 
 

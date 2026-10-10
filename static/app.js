@@ -1,7 +1,7 @@
 "use strict";
 
 const $ = id => document.getElementById(id);
-const optionFields = ["tom", "powiat_ujednolicony", "typ_punktu_osadniczego", "gubernia_ujednolicona"];
+const optionFields = ["tom", "powiat_ujednolicony", "typ", "typ_punktu_osadniczego", "gubernia_ujednolicona"];
 const CHAT_HISTORY_TURNS = 8;
 const CHAT_HISTORY_ANSWER_CHARS = 5000;
 const THEME_STORAGE_KEY = "sgkp-theme";
@@ -24,14 +24,36 @@ const UI_COPY = {
     semanticMode: "Semantyczne", semanticShare: "Udział semantyki", mobileShowFilters: "Pokaż filtry",
     mobileHideFilters: "Ukryj filtry", narrowResults: "Zawęź wyniki", filters: "Filtry", clear: "Wyczyść",
     volume: "Tom", allVolumes: "Wszystkie tomy", district: "Powiat", allDistricts: "Wszystkie powiaty",
-    entryScope: "Zakres haseł", allEntries: "Wszystkie hasła", placesOnly: "Tylko miejscowości",
+    entryScope: "Zakres haseł", allEntries: "Wszystkie hasła", placesOnly: "Tylko miejscowości", nonPlacesOnly: "Tylko hasła niebędące miejscowościami",
     informationFilters: "Informacje w haśle",
     informationFiltersHint: "Wymagaj informacji o wszystkich zaznaczonych kategoriach. Brak adnotacji nie oznacza braku obiektu.",
     presenceReligiousSites: "Obiekty sakralne", presenceSchools: "Szkoły", presenceMills: "Młyny",
     presenceIndustry: "Zakłady przemysłowe", presenceMonuments: "Zabytki",
     presenceArchaeology: "Znaleziska archeologiczne", presenceHealthcare: "Opieka zdrowotna",
     presenceLibraries: "Biblioteki", presenceSpas: "Uzdrowiska",
+    presenceCustoms: "Urzędy i obiekty celne",
+    presenceOffices: 'Urzędy',
+    presenceGardens: 'Ogrody i architektura krajobrazu',
+    presenceBreeding: 'Hodowla',
+    presenceCemeteries: 'Nekropolie',
+    presenceCharity: 'Dobroczynność',
+    presenceCourts: 'Sądy',
+    presenceMilitary: 'Wojsko',
+    presenceNavigation: 'Żegluga i przeprawy',
+    presenceCollections: 'Kolekcjonerstwo',
+    presencePrinting: 'Drukarnie',
+    presenceMuseums: 'Muzealnictwo',
+    presenceBookshops: 'Księgarnie',
+    presenceBursas: 'Bursy',
+    informationTransport: 'Transport i łączność',
+    informationAdministration: 'Urzędy, sądy i wojsko',
+    informationCulture: 'Kultura i książka',
+    presenceManors: "Dwory i pałace", presencePost: "Poczta i telegraf", presenceRailway: "Stacje kolejowe",
+    presenceTrade: "Handel", presenceCrafts: "Rzemiosło",
+    informationHeritage: 'Obiekty i dziedzictwo', informationEconomy: 'Gospodarka',
+    informationServices: 'Edukacja, zdrowie i dobroczynność',
     localityFilters: "Filtry miejscowości", localityAvailability: "Dostępne po wybraniu „Tylko miejscowości”.",
+    otherEntries: "Inne hasła", otherEntriesAvailability: "Dostępne po wybraniu „Tylko hasła niebędące miejscowościami”.",
     kingdomOnly: "Tylko Królestwo Polskie", settlementType: "Typ miejscowości", allTypes: "Wszystkie typy",
     governorate: "Gubernia", allGovernorates: "Wszystkie gubernie", commune: "Gmina", findCommune: "Znajdź nazwę gminy",
     chooseCommune: "Wybierz gminę", allCommunes: "Wszystkie gminy", communeHint: "Wpisz fragment nazwy, potem wybierz gminę z listy.",
@@ -125,14 +147,36 @@ const UI_COPY = {
     semanticMode: "Semantic", semanticShare: "Semantic share", mobileShowFilters: "Show filters",
     mobileHideFilters: "Hide filters", narrowResults: "Refine results", filters: "Filters", clear: "Clear",
     volume: "Volume", allVolumes: "All volumes", district: "District", allDistricts: "All districts",
-    entryScope: "Entry scope", allEntries: "All entries", placesOnly: "Localities only",
+    entryScope: "Entry scope", allEntries: "All entries", placesOnly: "Localities only", nonPlacesOnly: "Non-locality entries only",
     informationFilters: "Information in the entry",
     informationFiltersHint: "Require information about all selected categories. Missing annotations do not establish absence.",
     presenceReligiousSites: "Religious sites", presenceSchools: "Schools", presenceMills: "Mills",
     presenceIndustry: "Industrial facilities", presenceMonuments: "Historic monuments",
     presenceArchaeology: "Archaeological finds", presenceHealthcare: "Healthcare",
     presenceLibraries: "Libraries", presenceSpas: "Spas",
+    presenceCustoms: "Customs offices and facilities",
+    presenceOffices: 'Offices',
+    presenceGardens: 'Gardens and landscape architecture',
+    presenceBreeding: 'Animal husbandry',
+    presenceCemeteries: 'Cemeteries',
+    presenceCharity: 'Charity',
+    presenceCourts: 'Courts',
+    presenceMilitary: 'Military',
+    presenceNavigation: 'Navigation and crossings',
+    presenceCollections: 'Collecting',
+    presencePrinting: 'Printing houses',
+    presenceMuseums: 'Museums',
+    presenceBookshops: 'Bookshops',
+    presenceBursas: 'Student boarding houses',
+    informationTransport: 'Transport and communications',
+    informationAdministration: 'Offices, courts and military',
+    informationCulture: 'Culture and books',
+    presenceManors: "Manor houses and palaces", presencePost: "Post and telegraph", presenceRailway: "Railway stations",
+    presenceTrade: "Trade", presenceCrafts: "Crafts",
+    informationHeritage: 'Buildings and heritage', informationEconomy: 'Economy',
+    informationServices: 'Education, healthcare and charity',
     localityFilters: "Locality filters", localityAvailability: "Available after selecting “Localities only”.",
+    otherEntries: "Other entries", otherEntriesAvailability: "Available after selecting “Non-locality entries only”.",
     kingdomOnly: "Kingdom of Poland only", settlementType: "Settlement type", allTypes: "All types",
     governorate: "Governorate", allGovernorates: "All governorates", commune: "Commune", findCommune: "Find a commune",
     chooseCommune: "Choose a commune", allCommunes: "All communes", communeHint: "Enter part of a name, then select a commune from the list.",
@@ -348,6 +392,10 @@ function selectedMode() { return document.querySelector('input[name="mode"]:chec
 function localityOnly() { return document.querySelector('input[name="locality"]:checked').value === "only"; }
 function activeFilters() {
   const selected = {};
+  if (document.querySelector('input[name="locality"]:checked').value === "nonlocalities") {
+    selected.jest_miejscowoscia = "false";
+    if ($("typ").value) selected.typ = $("typ").value;
+  }
   for (const id of ["tom", "powiat_ujednolicony"]) {
     if ($(id).value) selected[id] = $(id).value;
   }
@@ -361,7 +409,7 @@ function activeFilters() {
   }
   if (!$("information-options").hidden) {
     document.querySelectorAll("[data-presence-filter]:checked").forEach(input =>
-      selected[input.id] = "true");
+      { if (!input.disabled) selected[input.id] = "true"; });
   }
   return selected;
 }
@@ -383,6 +431,10 @@ function updateFilterToggleLabel() {
 }
 function updateLocalityUi(clear = false) {
   const enabled = localityOnly();
+  const otherEnabled = document.querySelector('input[name="locality"]:checked').value === "nonlocalities";
+  $("other-entry-options").disabled = !otherEnabled;
+  $("other-entry-hint").hidden = otherEnabled;
+  if (!otherEnabled && clear) $("typ").value = "";
   $("locality-options").disabled = !enabled;
   $("locality-hint").hidden = enabled;
   if (!enabled && clear) {
@@ -759,6 +811,15 @@ async function loadFilterOptions() {
     const data = await api("api/v1/filter-options");
     const options = data.options || {};
     $("information-options").hidden = !data.presence_filters_available;
+    document.querySelectorAll("[data-presence-filter]").forEach(input => {
+      const available = Array.isArray(data.presence_filter_fields)
+        ? data.presence_filter_fields.includes(input.id)
+        : data.presence_filters_available && ["has_obiekty_sakralne", "has_szkoły", "has_młyny",
+            "has_przemysłowe", "has_zabytki", "has_archeo", "has_opieka_zdrowotna",
+            "has_biblioteki", "has_uzdrowiska"].includes(input.id);
+      input.disabled = !available;
+      input.closest("label").hidden = !available;
+    });
     $("parish-filter").hidden = !data.catholic_parish_filter_available;
     for (const id of optionFields) fillSelect(id, options[id] || []);
     state.gminas = (options.gmina || []).filter(value =>
@@ -931,7 +992,25 @@ function renderEntry() {
     opis_lokalizacji: t("locationDescription"),
     parafia_katolicka: t("catholicParish"), parafia_inna: t("otherParish"),
     obiekty_sakralne: t("religiousSites"), przemysłowe: t("industry"), młyny: t("mills"),
-    archeo: t("archaeology"), królestwo_polskie: t("kingdomOnly"),
+    archeo: t("archaeology"), zabytki: t("presenceMonuments"), szkoły: t("presenceSchools"),
+    biblioteki: t("presenceLibraries"), opieka_zdrowotna: t("presenceHealthcare"),
+    uzdrowiska: t("presenceSpas"), celne: t("presenceCustoms"),
+    budownictwo_palacowe: t("presenceManors"), poczta: t("presencePost"),
+    stacje_drogi_zelaznej: t("presenceRailway"), handel: t("presenceTrade"), rzemioslo: t("presenceCrafts"),
+    urzędy: t("presenceOffices"),
+    architektura_krajobrazu: t("presenceGardens"),
+    hodowla: t("presenceBreeding"),
+    nekropolie: t("presenceCemeteries"),
+    dobroczynnosc: t("presenceCharity"),
+    sądy: t("presenceCourts"),
+    wojsko: t("presenceMilitary"),
+    żegluga: t("presenceNavigation"),
+    kolekcjonerstwo: t("presenceCollections"),
+    drukarnie: t("presencePrinting"),
+    muzealnictwo: t("presenceMuseums"),
+    księgarnie: t("presenceBookshops"),
+    bursa: t("presenceBursas"),
+    królestwo_polskie: t("kingdomOnly"),
     l_mk_statystyka: t("populationStatistics"),
     l_dm_statystyka: t("dwellingStatistics"), ludność_wyznanie: t("religiousStructure")
   };
@@ -1305,7 +1384,9 @@ async function initialize() {
   for (const id of optionFields) if (params.get(id)) $(id).value = id === "tom" ? volumeValue(params.get(id)) : params.get(id);
   if (params.get("gmina")) { $("gmina-search").value = params.get("gmina"); renderGminaChoices(); $("gmina").value = params.get("gmina"); }
   if (params.get("parafia_katolicka") && !$("parish-filter").hidden) { $("parafia_katolicka-search").value = params.get("parafia_katolicka"); renderParishChoices(); $("parafia_katolicka").value = params.get("parafia_katolicka"); }
-  if (params.get("jest_miejscowoscia") === "true" || ["gmina", "parafia_katolicka", "gubernia_ujednolicona", "typ_punktu_osadniczego", "królestwo_polskie"].some(id => params.get(id))) {
+  if (params.get("jest_miejscowoscia") === "false" || params.get("typ")) {
+    document.querySelector('input[name="locality"][value="nonlocalities"]').checked = true;
+  } else if (params.get("jest_miejscowoscia") === "true" || ["gmina", "parafia_katolicka", "gubernia_ujednolicona", "typ_punktu_osadniczego", "królestwo_polskie"].some(id => params.get(id))) {
     document.querySelector('input[name="locality"][value="only"]').checked = true;
   }
   $("kingdom-only").checked = params.get("królestwo_polskie") === "true";

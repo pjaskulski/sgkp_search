@@ -167,9 +167,9 @@ class ApiTests(unittest.TestCase):
     def test_filter_options_include_only_locality_values_for_locality_fields(self):
         entries = [
             {"tom": "01", "powiat_ujednolicony": "warszawski", "jest_miejscowoscia": True,
-             "typ_punktu_osadniczego": ["Wieś"], "gmina": "Wilanów", "gubernia_ujednolicona": "warszawska"},
+             "typ_punktu_osadniczego": ["Wieś"], "typ": ["wieś", "rzeka"], "gmina": "Wilanów", "gubernia_ujednolicona": "warszawska"},
             {"tom": "02", "powiat_ujednolicony": "krakowski", "jest_miejscowoscia": False,
-             "typ_punktu_osadniczego": None, "gmina": "Nie dotyczy", "gubernia_ujednolicona": "Nie dotyczy"},
+             "typ_punktu_osadniczego": None, "typ": ["rzeka", "jezioro", "wieś"], "gmina": "Nie dotyczy", "gubernia_ujednolicona": "Nie dotyczy"},
             {"tom": "03", "powiat_ujednolicony": "łomżyński", "jest_miejscowoscia": True,
              "typ_punktu_osadniczego": ["Wieś"], "gmina": "?omża", "gubernia_ujednolicona": "łomżyńska"},
             {"tom": "04", "powiat_ujednolicony": "łomżyński", "jest_miejscowoscia": True,
@@ -179,6 +179,7 @@ class ApiTests(unittest.TestCase):
         with patch.object(web, "iter_entries", return_value=iter(entries)):
             response = self.client.get("/api/v1/filter-options")
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["options"]["typ"], ["jezioro", "rzeka"])
         self.assertEqual(response.json["options"]["gmina"], ["Wilanów", "Łomża"])
         self.assertEqual(response.json["options"]["gubernia_ujednolicona"], ["warszawska", "łomżyńska"])
         self.assertEqual(response.json["options"]["powiat_ujednolicony"], ["krakowski", "warszawski", "łomżyński"])

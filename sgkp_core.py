@@ -12,9 +12,22 @@ VOLUMES = tuple(f"{number:02d}" for number in range(1, 17))
 PRESENCE_FIELDS = {
     f"has_{field}": field for field in (
         "obiekty_sakralne", "szkoły", "młyny", "przemysłowe", "zabytki",
-        "archeo", "opieka_zdrowotna", "biblioteki", "uzdrowiska",
+        "archeo", "opieka_zdrowotna", "biblioteki", "uzdrowiska", "celne",
+        "budownictwo_palacowe", "poczta", "stacje_drogi_zelaznej", "handel", "rzemioslo",
+        "urzędy", "architektura_krajobrazu", "hodowla", "nekropolie", "dobroczynnosc",
+        "sądy", "wojsko", "żegluga", "kolekcjonerstwo", "drukarnie", "muzealnictwo",
+        "księgarnie", "bursa",
     )
 }
+PRESENCE_FIELD_VERSIONS = {flag: 1 for flag in PRESENCE_FIELDS}
+PRESENCE_FIELD_VERSIONS.update(has_celne=2, has_budownictwo_palacowe=3, has_poczta=3,
+                              has_stacje_drogi_zelaznej=3, has_handel=3, has_rzemioslo=3)
+PRESENCE_FIELD_VERSIONS.update({flag: 4 for flag, field in PRESENCE_FIELDS.items()
+                              if field in (
+                                  "urzędy", "architektura_krajobrazu", "hodowla", "nekropolie",
+                                  "dobroczynnosc", "sądy", "wojsko", "żegluga", "kolekcjonerstwo",
+                                  "drukarnie", "muzealnictwo", "księgarnie", "bursa")})
+PRESENCE_FILTER_VERSION = max(PRESENCE_FIELD_VERSIONS.values())
 BOOLEAN_FILTER_FIELDS = ("jest_miejscowoscia", "królestwo_polskie", *PRESENCE_FIELDS)
 FILTER_FIELDS = (
     "tom", "rodzaj", "jest_miejscowoscia", "typ_punktu_osadniczego", "typ",

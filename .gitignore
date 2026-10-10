@@ -223,3 +223,6 @@ DOKUMENTACJA_TECHNICZNA.md
 # Generated relevance assessment exports
 /log/*.csv
 .aws
+
+.agents
+AGENTS.md
