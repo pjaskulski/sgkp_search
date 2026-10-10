@@ -61,6 +61,10 @@ CHAT_INFORMATION_LABELS = {
     'muzealnictwo': ('muzealnictwie', 'museums'),
     'księgarnie': ('księgarniach', 'bookshops'),
     'bursa': ('bursach', 'student boarding houses'),
+    'l_mk_statystyka': ('liczbie mieszkańców', 'population figures'),
+    'l_dm_statystyka': ('liczbie domów', 'house counts'),
+    'ludność_wyznanie': ('strukturze wyznaniowej', 'religious composition'),
+    'własność_ziemska': ('strukturze gruntów', 'land composition and areas'),
 }
 CHAT_EVIDENCE_METADATA_FIELDS = tuple(dict.fromkeys((*CHAT_METADATA_FIELDS, *CHAT_INFORMATION_LABELS)))
 CHAT_PASSAGES_PER_ENTRY = 3

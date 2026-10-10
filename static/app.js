@@ -48,6 +48,8 @@ const UI_COPY = {
     informationTransport: 'Transport i łączność',
     informationAdministration: 'Urzędy, sądy i wojsko',
     informationCulture: 'Kultura i książka',
+    informationStatistics: 'Dane statystyczne',
+    landStructure: 'Struktura gruntów',
     presenceManors: "Dwory i pałace", presencePost: "Poczta i telegraf", presenceRailway: "Stacje kolejowe",
     presenceTrade: "Handel", presenceCrafts: "Rzemiosło",
     informationHeritage: 'Obiekty i dziedzictwo', informationEconomy: 'Gospodarka',
@@ -88,6 +90,7 @@ const UI_COPY = {
     exampleBarczaca: 'Co wiadomo o miejscowości Barcząca?',
     exampleOrzeszkowa: 'Czy jakieś hasła są związane z Elizą Orzeszkową?',
     exampleLukasiewicz: 'Jakie informacje w słowniku SGKP można odnaleźć na temat Ignacego Łukasiewicza?',
+    exampleKakowaWola: 'Kto w 1771 roku sprzedał dobra Kąkowa Wola Piotrowi Brzeskiemu?',
     exampleCustomsCount: 'W ilu hasłach pojawiają się informacje o urzędach i obiektach celnych?',
     exampleReligiousCount: "W ilu hasłach pojawiają się informacje o obiektach sakralnych?",
     clearConversation: "Wyczyść rozmowę", yourQuestion: "Twoje pytanie",
@@ -193,6 +196,8 @@ const UI_COPY = {
     informationTransport: 'Transport and communications',
     informationAdministration: 'Offices, courts and military',
     informationCulture: 'Culture and books',
+    informationStatistics: 'Statistical data',
+    landStructure: 'Land composition and areas',
     presenceManors: "Manor houses and palaces", presencePost: "Post and telegraph", presenceRailway: "Railway stations",
     presenceTrade: "Trade", presenceCrafts: "Crafts",
     informationHeritage: 'Buildings and heritage', informationEconomy: 'Economy',
@@ -233,6 +238,7 @@ const UI_COPY = {
     exampleBarczaca: 'What is known about the locality of Barcząca?',
     exampleOrzeszkowa: 'Are any entries related to Eliza Orzeszkowa?',
     exampleLukasiewicz: 'What information about Ignacy Łukasiewicz can be found in the SGKP dictionary?',
+    exampleKakowaWola: 'Who sold the Kąkowa Wola estate to Piotr Brzeski in 1771?',
     exampleCustomsCount: 'How many entries contain information about customs offices and facilities?',
     exampleReligiousCount: "How many entries contain information about religious buildings?",
     clearConversation: "Clear conversation", yourQuestion: "Your question",
@@ -301,7 +307,7 @@ const UI_COPY = {
 // Add new examples here, with corresponding Polish and English UI_COPY strings.
 const EXAMPLE_GROUPS = [
   {category: "places", label: "examplesPlaces", questions: ["exampleKingdom", "exampleSettlements", "exampleZawady", "exampleKononowicze", "exampleBarczaca"]},
-  {category: "people", label: "examplesPeople", questions: ["exampleOrzeszkowa", "exampleLukasiewicz"]},
+  {category: "people", label: "examplesPeople", questions: ["exampleOrzeszkowa", "exampleLukasiewicz", "exampleKakowaWola"]},
   {category: "economy", label: "examplesEconomy", questions: ["exampleGlassworks", "exampleOil", "exampleZyrardow"]},
   {category: "heritage", label: "examplesHeritage", questions: ["exampleArchaeology"]},
   {category: "health", label: "examplesHealth", questions: ["exampleSpas"]},
@@ -828,6 +834,8 @@ async function loadBrowse(page = 1) {
   const current = ++state.browseRequest;
   state.browseData = null;
   setText($("browse-status"), t("browseLoading"));
+  $("browse-status").classList.add("is-searching");
+  $("browse-results").setAttribute("aria-busy", "true");
   $("browse-status").classList.remove("error");
   $("browse-results").replaceChildren();
   $("browse-pagination").hidden = true;
@@ -846,6 +854,11 @@ async function loadBrowse(page = 1) {
     $("browse-status").classList.add("error");
     $("browse-pagination-top").hidden = true;
     $("browse-results").append(makeEmpty(t("searchFailedTitle"), t("serviceRetry")));
+  } finally {
+    if (current === state.browseRequest) {
+      $("browse-status").classList.remove("is-searching");
+      $("browse-results").setAttribute("aria-busy", "false");
+    }
   }
 }
 function renderGminaChoices() {
@@ -1013,8 +1026,9 @@ function structuredMetadataNode(field, value, entryName) {
   for (const group of groups) {
     if (!group || typeof group !== "object" || Array.isArray(group)) continue;
     const section = element("div", undefined, "metadata-group");
-    const scope = typeof group.dotyczy === "string" && group.dotyczy.trim().toLocaleLowerCase("pl-PL") === "główna miejscowość"
-      ? entryName : group.dotyczy;
+    const groupScope = field === "własność_ziemska" ? group.land_name : group.dotyczy;
+    const scope = typeof groupScope === "string" && groupScope.trim().toLocaleLowerCase("pl-PL") === "główna miejscowość"
+      ? entryName : groupScope;
     if (scope) section.append(element("strong", scope, "metadata-group-title"));
     const list = element("ul", undefined, "metadata-detail-list");
     let details = [];
@@ -1028,6 +1042,14 @@ function structuredMetadataNode(field, value, entryName) {
           const text = [confession, parish].filter(Boolean).join(": ");
           if (text) list.append(element("li", text));
         }
+      }
+    } else if (field === "własność_ziemska") {
+      details = Array.isArray(group.land) ? group.land : [];
+      for (const detail of details) {
+        if (!detail || typeof detail !== "object") continue;
+        const area = detail.area_of_ground;
+        if (area === null || area === undefined || String(area).trim() === "") continue;
+        list.append(element("li", [detail.type_of_ground, String(area)].filter(Boolean).join(": ")));
       }
     } else if (field === "ludność_wyznanie") {
       details = Array.isArray(group.struktura_wyznaniowa) ? group.struktura_wyznaniowa : [];
@@ -1093,13 +1115,14 @@ function renderEntry() {
     bursa: t("presenceBursas"),
     królestwo_polskie: t("kingdomOnly"),
     l_mk_statystyka: t("populationStatistics"),
-    l_dm_statystyka: t("dwellingStatistics"), ludność_wyznanie: t("religiousStructure")
+    l_dm_statystyka: t("dwellingStatistics"), ludność_wyznanie: t("religiousStructure"),
+    własność_ziemska: t("landStructure")
   };
   $("entry-fields-list").replaceChildren();
   for (const [key, label] of Object.entries(labels)) {
     let value = entry.metadata[key];
     if (value === null || value === undefined || value === "" || (Array.isArray(value) && !value.length)) continue;
-    if (["parafia_inna", "l_mk_statystyka", "l_dm_statystyka", "ludność_wyznanie"].includes(key)) {
+    if (["parafia_inna", "l_mk_statystyka", "l_dm_statystyka", "ludność_wyznanie", "własność_ziemska"].includes(key)) {
       const formatted = structuredMetadataNode(key, value, entry.nazwa);
       if (!formatted) continue;
       const definition = element("dd");

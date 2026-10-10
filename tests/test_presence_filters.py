@@ -11,6 +11,27 @@ from sgkp_enable_presence_filters import stage_documents, update_indexes
 
 
 class PresenceTests(unittest.TestCase):
+    def test_statistical_flags_require_data_and_preserve_zero_and_child_scope(self):
+        empty = {"l_mk_statystyka": [{"dotyczy": "wieś", "liczba": None}],
+                 "l_dm_statystyka": [{"liczba": [{"data": "1870", "liczba": " "}]}],
+                 "ludność_wyznanie": [{"dotyczy": "parafia", "struktura_wyznaniowa": []}],
+                 "własność_ziemska": [{"land_name": "folwark", "land": [{"type_of_ground": "las"}]}]}
+        for field in empty:
+            self.assertFalse(presence_flags(empty)["has_" + field])
+        data = {"l_mk_statystyka": [{"liczba": [{"data": "obecnie", "liczba": 0}]}],
+                "l_dm_statystyka": [{"liczba": [{"liczba": "18"}]}],
+                "ludność_wyznanie": [{"struktura_wyznaniowa": [{"wyznanie_ocr": "kat.", "liczba": "42"}]}],
+                "własność_ziemska": [{"land_name": "dobra", "land": [{"type_of_ground": "las", "area_of_ground": "200 mórg"}]}]}
+        row = {"ID": "01-00001", "nazwa": "A", "text": "Opis.", "tom": "01", "strona": 1, **data}
+        parent = normalize(row, "sgkp_01.json", 0)
+        child = normalize(row, "sgkp_01.json", 0, {"ID": "01-00001-001", "nr": "1", "nazwa": "B", "text": "Opis B.", **empty}, 0)
+        for field in data:
+            flag = "has_" + field
+            self.assertTrue(parent[flag])
+            self.assertTrue(passages(parent)[0][flag])
+            self.assertFalse(child[flag])
+            self.assertEqual(PRESENCE_FIELD_VERSIONS[flag], 5)
+
     def test_parish_filter_options_passages_and_api(self):
         row = {"ID": "01-00001", "nazwa": "A", "text": "Opis.", "tom": "01", "strona": 1,
                "typ_punktu_osadniczego": ["wieś"], "parafia_katolicka": ["Warszawa", "Raszyn"]}
@@ -91,6 +112,11 @@ class PresenceTests(unittest.TestCase):
                 self.assertIn("has_" + field, available)
             for flag, version in PRESENCE_FIELD_VERSIONS.items():
                 if version == 4:
+                    self.assertNotIn(flag, available)
+            config["presence_filters_version"] = 4
+            available = client.get("/api/v1/filter-options").json["presence_filter_fields"]
+            for flag, version in PRESENCE_FIELD_VERSIONS.items():
+                if version == 5:
                     self.assertNotIn(flag, available)
             config["presence_filters_version"] = PRESENCE_FILTER_VERSION
             self.assertEqual(set(client.get("/api/v1/filter-options").json["presence_filter_fields"]),

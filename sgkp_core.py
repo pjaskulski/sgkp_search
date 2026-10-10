@@ -16,7 +16,8 @@ PRESENCE_FIELDS = {
         "budownictwo_palacowe", "poczta", "stacje_drogi_zelaznej", "handel", "rzemioslo",
         "urzędy", "architektura_krajobrazu", "hodowla", "nekropolie", "dobroczynnosc",
         "sądy", "wojsko", "żegluga", "kolekcjonerstwo", "drukarnie", "muzealnictwo",
-        "księgarnie", "bursa",
+        "księgarnie", "bursa", "l_mk_statystyka", "l_dm_statystyka",
+        "ludność_wyznanie", "własność_ziemska",
     )
 }
 PRESENCE_FIELD_VERSIONS = {flag: 1 for flag in PRESENCE_FIELDS}
@@ -27,6 +28,8 @@ PRESENCE_FIELD_VERSIONS.update({flag: 4 for flag, field in PRESENCE_FIELDS.items
                                   "urzędy", "architektura_krajobrazu", "hodowla", "nekropolie",
                                   "dobroczynnosc", "sądy", "wojsko", "żegluga", "kolekcjonerstwo",
                                   "drukarnie", "muzealnictwo", "księgarnie", "bursa")})
+STATISTICAL_FIELDS = ("l_mk_statystyka", "l_dm_statystyka", "ludność_wyznanie", "własność_ziemska")
+PRESENCE_FIELD_VERSIONS.update({f"has_{field}": 5 for field in STATISTICAL_FIELDS})
 PRESENCE_FILTER_VERSION = max(PRESENCE_FIELD_VERSIONS.values())
 BOOLEAN_FILTER_FIELDS = ("jest_miejscowoscia", "królestwo_polskie", *PRESENCE_FIELDS)
 FILTER_FIELDS = (
@@ -146,8 +149,28 @@ def has_information(value) -> bool:
     return value is not None
 
 
+def has_statistical_information(field: str, value) -> bool:
+    """Require actual data, not a scope title or a date alone; zero is valid."""
+    if isinstance(value, list):
+        return any(has_statistical_information(field, item) for item in value)
+    if not isinstance(value, dict):
+        return has_information(value)
+    if field in ("l_mk_statystyka", "l_dm_statystyka"):
+        return has_statistical_information(field, value.get("liczba"))
+    if field == "ludność_wyznanie":
+        details = value.get("struktura_wyznaniowa")
+        return isinstance(details, list) and any(isinstance(item, dict) and
+            any(has_information(item.get(key)) for key in ("wyznanie_ocr", "wyznanie", "liczba"))
+            for item in details)
+    details = value.get("land")
+    return isinstance(details, list) and any(isinstance(item, dict) and
+        has_information(item.get("area_of_ground")) for item in details)
+
+
 def presence_flags(source: dict) -> dict:
-    return {flag: has_information(source.get(field)) for flag, field in PRESENCE_FIELDS.items()}
+    return {flag: (has_statistical_information(field, source.get(field))
+                   if field in STATISTICAL_FIELDS else has_information(source.get(field)))
+            for flag, field in PRESENCE_FIELDS.items()}
 
 
 def normalize(row: dict, source_file: str, record_index: int, element: dict | None = None, element_index: int | None = None) -> dict:
