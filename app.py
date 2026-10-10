@@ -199,7 +199,8 @@ def model_interpret_question(question: str, config: dict, history: list,
          "Zinterpretuj pytanie do wyszukiwania w SGKP. Nie odpowiadaj na pytanie. "
          "Zwróć wyłącznie JSON: names (lista nazw), district "
          "(wartość z listy powiatów albo null), many_localities (true albo false), "
-         "information_categories (lista kategorii), count_entries (true albo false). "
+         "information_categories (lista kategorii), count_entries (true albo false), "
+         "entities (lista obiektów: name, kind, canonical, surname). "
          "information_categories: wybierz wyłącznie klucze z mapy kategorii: "
          f"{json.dumps({field: labels[0] for field, labels in CHAT_INFORMATION_LABELS.items()}, ensure_ascii=False)}. "
          "Kategorie wskazują obecność informacji; dla węższego tematu można wskazać kategorię nadrzędną. "
@@ -209,11 +210,18 @@ def model_interpret_question(question: str, config: dict, history: list,
          "porównaniach, zliczaniu tylko wyników poprzedniej odpowiedzi lub ograniczeniu "
          "geograficznym innym niż jednoznacznie rozpoznany district. "
          "Wiele kategorii oznacza wymóg obecności każdej z nich; alternatywa oznacza pustą listę. "
-         "names: nazwy własne haseł, o które użytkownik pyta bezpośrednio: miejscowości, "
+         "names: nazwy własne, o które użytkownik pyta bezpośrednio: miejscowości, "
          "obiektów geograficznych lub osób. Rozpoznawaj zapis małą literą i formy odmienione. "
          "Przepisz nazwy dokładnie z bieżącego pytania; nie dopowiadaj nazw z historii. "
          "Pomiń słowa pytające, ogólne kategorie i obszary będące wyłącznie warunkiem "
          f"lokalizacji. Podaj najwyżej {CHAT_NAMED_SUBJECT_LIMIT} nazw. "
+         "entities: sklasyfikuj każdą nazwę z names; name to dokładny zapis z pytania, "
+         "kind to person, place, other albo unknown. Osoby wyszukujemy jako wzmianki w treści, "
+         "nawet gdy pytanie dotyczy haseł lub miejsc z nimi związanych. Nie pomijaj takiej osoby. "
+         "canonical to ta sama nazwa w mianowniku, bez dodawania imion lub informacji. "
+         "Dla person podaj surname (nazwisko w mianowniku); dla pozostałych surname=null. "
+         "Nie traktuj nazwiska osoby jako nazwy miejscowości. Nie dopowiadaj osób z historii "
+         "ani z wiedzy ogólnej; nie poprawiaj nazwisk na nazwisko innej osoby. "
          "district: ustaw tylko gdy bieżące pytanie jednoznacznie ogranicza wyszukiwanie "
          "do jednego konkretnego powiatu. Uwzględnij odmianę gramatyczną. Nie wywnioskuj "
          "powiatu z miejscowości ani wiedzy geograficznej. Sama wzmianka, pytanie o "
@@ -229,7 +237,7 @@ def model_interpret_question(question: str, config: dict, history: list,
             "districts": districts}, ensure_ascii=False)},
     ]
     try:
-        answer = preliminary_chat_answer(messages, 500, "interpretacja pytania").strip()
+        answer = preliminary_chat_answer(messages, 900, "interpretacja pytania").strip()
         if answer.startswith("```"):
             answer = answer.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
         parsed = json.loads(answer)
@@ -240,11 +248,12 @@ def model_interpret_question(question: str, config: dict, history: list,
         log_chat_decision("interpretacja pytania — wynik", **fallback, zastępczy=True)
         return fallback
     names = parsed.get("names")
-    accepted_names = (list(dict.fromkeys(name.strip() for name in names
-        if isinstance(name, str) and 1 < len(name.strip()) <= 120
-        and name.strip().casefold() in question.casefold()))[:CHAT_NAMED_SUBJECT_LIMIT]
+    accepted_names = (list(dict.fromkeys(span for name in names
+        if (span := explicit_question_name(name, question))))[:CHAT_NAMED_SUBJECT_LIMIT]
         if isinstance(names, list) else fallback["names"])
     district = parsed.get("district")
+    entities = validated_question_entities(parsed.get("entities"), question)
+    accepted_names = list(dict.fromkeys([*accepted_names, *(item["name"] for item in entities)]))[:CHAT_NAMED_SUBJECT_LIMIT]
     categories = parsed.get("information_categories")
     categories = list(dict.fromkeys(item for item in categories
         if isinstance(item, str) and item in CHAT_INFORMATION_LABELS)) if isinstance(categories, list) else []
@@ -255,6 +264,8 @@ def model_interpret_question(question: str, config: dict, history: list,
         "information_categories": categories,
         "count_entries": parsed.get("count_entries") is True and bool(categories) and not accepted_names,
     }
+    if entities:
+        result["entities"] = [item for item in entities if item["name"] in accepted_names]
     log_chat_decision("interpretacja pytania — wynik", **result, zastępczy=False)
     return result
 
@@ -306,6 +317,100 @@ def name_stem(word: str) -> str:
         if word.endswith(ending) and len(word) - len(ending) >= 4:
             return word[:-len(ending)]
     return word
+
+
+def explicit_question_name(name, question: str) -> str | None:
+    """Recover the literal question span when the model returns a declined name's base form."""
+    if not isinstance(name, str) or not 2 <= len(name.strip()) <= 120:
+        return None
+    wanted = re.findall(r"[\w-]+", name.casefold())
+    words = list(re.finditer(r"[\w-]+", question))
+    if not wanted:
+        return None
+    for start in range(len(words) - len(wanted) + 1):
+        group = words[start:start + len(wanted)]
+        if all(actual.group().casefold().startswith(name_stem(target))
+               and len(actual.group()) - len(name_stem(target)) <= 4
+               for target, actual in zip(wanted, group)):
+            # A model-proposed multiword name must be contiguous in the question.
+            if any(not re.fullmatch(r"[\s.]+", question[left.end():right.start()])
+                   for left, right in zip(group, group[1:])):
+                continue
+            return question[group[0].start():group[-1].end()]
+    return None
+
+
+def validated_question_entities(raw, question: str) -> list[dict]:
+    """Keep only explicit subjects and inflections, never model-invented identities."""
+    if not isinstance(raw, list):
+        return []
+    result = []
+    for item in raw[:CHAT_NAMED_SUBJECT_LIMIT]:
+        if not isinstance(item, dict):
+            continue
+        name, kind = explicit_question_name(item.get("name"), question), item.get("kind")
+        if not name or kind not in {"person", "place", "other", "unknown"}:
+            continue
+        name = name.strip()
+        original_words = re.findall(r"[\w-]+", name.casefold())
+        canonical = item.get("canonical")
+        canonical_words = re.findall(r"[\w-]+", canonical.casefold()) if isinstance(canonical, str) else []
+        def inflection_of(word, original):
+            stem = name_stem(word)
+            return original.startswith(stem) and len(original) - len(stem) <= 4
+        if (not isinstance(canonical, str) or not 2 <= len(canonical.strip()) <= 120
+                or len(canonical_words) != len(original_words)
+                or not all(inflection_of(word, original) for word, original in zip(canonical_words, original_words))):
+            canonical = name
+        surname = item.get("surname")
+        surname_words = re.findall(r"[\w-]+", surname.casefold()) if isinstance(surname, str) else []
+        if (kind != "person" or not isinstance(surname, str) or not 2 <= len(surname.strip()) <= 80
+                or not surname_words or not all(any(inflection_of(word, original)
+                    for original in original_words) for word in surname_words)):
+            surname = None
+        entity = {"name": name, "kind": kind, "canonical": canonical.strip(),
+                  "surname": surname.strip() if surname else None}
+        if entity not in result:
+            result.append(entity)
+    return result
+
+
+@timed_stage("wyszukiwanie wzmianek o osobach")
+def person_passages(index: str, entity: dict, expression: list[str], attributes: list[str]) -> list[dict]:
+    """Search body mentions, including surname-only, initials and reversed name order."""
+    canonical = entity["canonical"]
+    surname = entity.get("surname")
+    # Missing surname analysis still permits a body search, without guessing name order.
+    terms = [canonical, entity["name"]]
+    if surname:
+        words = canonical.split()
+        if len(words) > 1:
+            terms.append(" ".join(reversed(words)))
+        terms.append(" ".join(name_stem(word) for word in surname.split()))
+    terms = list(dict.fromkeys(terms))[:4]
+    matching = {}
+    for term in terms:
+        hits = Meili().search(index, {"q": term, "limit": CHAT_SEARCH_LIMIT,
+            "filter": expression, "attributesToSearchOn": ["text"],
+            "attributesToRetrieve": attributes}).get("hits", [])
+        for hit in hits:
+            text_words = re.findall(r"[\w-]+", (hit.get("text") or "").casefold())
+            wanted = re.findall(r"[\w-]+", (surname or canonical).casefold())
+            if all(any(word.startswith(name_stem(target)) and
+                       len(word) - len(name_stem(target)) <= 4 for word in text_words)
+                   for target in wanted):
+                matching.setdefault(hit["passage_id"], hit)
+    # Full names have priority; surname-only evidence remains subject to identity verification.
+    given = [word for word in canonical.casefold().split()
+             if not surname or word not in surname.casefold().split()]
+    def priority(hit):
+        words = re.findall(r"[\w-]+", (hit.get("text") or "").casefold())
+        return sum(any(word.startswith(name_stem(target)) for word in words) for target in given)
+    result = interleave_entries(sorted(matching.values(), key=priority, reverse=True))[:CHAT_SEARCH_LIMIT]
+    log_chat_decision("wyniki wyszukiwania wzmianek o osobie", osoba=entity["name"],
+                      zapytania=terms, liczba=len(result),
+                      passage_ids=[hit["passage_id"] for hit in result])
+    return result
 
 
 def name_match_score(name: str, title: str) -> int:
@@ -1347,6 +1452,8 @@ def chat():
             app.logger.info("Konwersacja: powiat rozpoznany w pytaniu: %s", district)
     expression = filters(selected_filters)
     mentioned_names = interpretation["names"]
+    person_entities = {item["name"]: item for item in interpretation.get("entities", [])
+                       if item["kind"] == "person"}
     categories = interpretation.get("information_categories", [])
     if interpretation.get("count_entries") and categories:
         report_progress("preparing_answer")
@@ -1465,8 +1572,13 @@ def chat():
                 app.logger.warning("Embedding niedostępny; wyszukiwanie fragmentów pełnotekstowe: %s", exc)
         named = []
         for name in mentioned_names:
-            named.extend(named_passages(config["passages_index"], name, expression,
-                                        payload["attributesToRetrieve"], question))
+            if name in person_entities:
+                named.extend(person_passages(config["passages_index"], person_entities[name],
+                                             expression, payload["attributesToRetrieve"]))
+            else:
+                named.extend(named_passages(config["passages_index"], name, expression,
+                                            payload["attributesToRetrieve"], question))
+        named = list({hit["passage_id"]: hit for hit in named}.values())
         selected = verifier.select(
             named, CHAT_SOURCE_LIMIT - CHAT_NAMED_BACKGROUND_LIMIT,
             force=True)
@@ -1594,6 +1706,9 @@ def chat():
             "Add a citation [n] to every factual claim, using the relevant source. In lists, cite each item individually. "
             "For a question asking for places, list all places supported by the retrieved passages, not just examples. "
             "Omit irrelevant results; do not mention or explain rejected results unless asked. "
+            "For questions about people, distinguish namesakes. A surname or initial alone is not proof "
+            "of identity; require identifying context in the supplied source. Do not infer biographical "
+            "connections from general knowledge or a similar place name. "
             "Metadata belongs to the entry; ‘no data’ does not mean ‘no’. Distinguish entries with the same name by district. "
             "To establish that an object or activity existed in a place, require an explicit statement in the description "
             "or a relevant metadata field linking it to that place. If the evidence comes only from metadata, say so "
@@ -1617,6 +1732,9 @@ def chat():
             "W wyliczeniach umieszczaj odsyłacz przy każdym punkcie, zamiast zbioru numerów na końcu odpowiedzi. "
             "Jeśli pytanie dotyczy wykazu miejsc, wymień wszystkie miejscowości potwierdzone przez znalezione fragmenty, a nie tylko przykłady. "
             "Pomijaj wyniki nieistotne dla pytania; nie wymieniaj ich ani nie objaśniaj, dlaczego zostały odrzucone, chyba że użytkownik o to poprosi. "
+            "Przy pytaniach o osoby rozróżniaj osoby o tym samym nazwisku. Samo nazwisko lub inicjał "
+            "nie dowodzi tożsamości; wymagaj identyfikującego kontekstu w źródle. Nie dopowiadaj "
+            "związków biograficznych z wiedzy ogólnej ani z podobnej nazwy miejscowości. "
             "Metadane przy każdym fragmencie są częścią danych hasła; «brak danych» nie oznacza «nie». "
             "Przy hasłach o tej samej nazwie rozróżniaj miejscowości według powiatu. "
             "Gdy pytanie dotyczy istnienia obiektu lub działalności w miejscowości, wymagaj zapisu w opisie lub odpowiednim polu metadanych, który jednoznacznie wiąże ten obiekt lub działalność z tą miejscowością. "
