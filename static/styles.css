@@ -235,6 +235,8 @@ dialog::backdrop { background: #102b4bb8; }
 .help-content section + section { margin-top: 21px; padding-top: 18px; border-top: 1px solid var(--line); }
 .help-content h3 { margin: 0 0 7px; font-size: 20px; }
 .help-content p { margin: 0; color: var(--ink-soft); line-height: 1.65; }
+.help-content .help-data-notice { color: #9b450c; font-weight: 600; margin-bottom: 22px; }
+html[data-theme="dark"] .help-content .help-data-notice { color: #ffb673; }
 .dialog-head { display: flex; justify-content: space-between; gap: 18px; align-items: start; padding: 25px 30px 19px; border-bottom: 1px solid var(--line); }
 .dialog-head h2 { font-size: 31px; }
 .entry-heading { min-width: 0; }
