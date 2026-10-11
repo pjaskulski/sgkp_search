@@ -35,8 +35,8 @@ Interfejs ma trzy zakładki: **Wyszukiwanie** z wynikami, **Konwersacja** z odpo
 
 Wyszukiwanie pełnotekstowe:
 
-![screeenshot](./image/screenshot_01.png)
+![screeenshot](./image/screenshot_02.png)
 
 Konwersacja:
 
-![screeenshot](./image/screenshot_02.png)
+![screeenshot](./image/screenshot_01.png)
