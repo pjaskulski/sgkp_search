@@ -32,3 +32,11 @@ venv/bin/python app.py
 ## Opis 
 
 Interfejs ma trzy zakładki: **Wyszukiwanie** z wynikami, **Konwersacja** z odpowiedziami opartymi na cytowanych hasłach oraz **Przeglądanie** gdzie można ręcznie przeglądać hasła słownika. Opis aplikacji i wskazówki znajdują się w oknie **Pomoc** w nagłówku. W obu widokach dostępny jest ten sam zestaw filtrów. Po wybraniu „Tylko miejscowości” odblokowują się pola: „Tylko Królestwo Polskie”, typ miejscowości, gubernia i gmina. Gminę wybiera się z listy po wpisaniu fragmentu nazwy. 
+
+Wyszukiwanie pełnotekstowe:
+
+![screeenshot](./image/screenshot_01.png)
+
+Konwersacja:
+
+![screeenshot](./image/screenshot_02.png)
